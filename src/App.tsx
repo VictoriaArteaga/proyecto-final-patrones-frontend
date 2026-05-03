@@ -1,30 +1,27 @@
-<<<<<<< HEAD
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline } from '@mui/material';
 import Login from './pages/Login';
-import Register from './pages/Register'; // NUEVO: Importamos el Registro
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-=======
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
-import Login from "./pages/Login";
->>>>>>> b6c3afdfe13a2646f20496afdab1dd30aac44751
+import NewProject from './pages/NewProject';
+import Layout from './components/Layout';
 
 function App() {
   return (
     <BrowserRouter>
-<<<<<<< HEAD
       <CssBaseline />
       <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         
+        {/* Public Routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} /> {/* NUEVO: La ruta */}
-        <Route path="/dashboard" element={<Dashboard />} />
-=======
-      <Routes>
-        <Route path="/" element={<Login />} />
->>>>>>> b6c3afdfe13a2646f20496afdab1dd30aac44751
+        <Route path="/register" element={<Register />} />
+        
+        {/* Protected Routes inside Layout */}
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/new-project" element={<NewProject />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

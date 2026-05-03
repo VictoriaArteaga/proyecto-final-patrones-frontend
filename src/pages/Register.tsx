@@ -35,11 +35,32 @@ export default function Register() {
       }, 2000);
       
     } catch (err: any) {
-      const backendError = err.response?.data?.message || err.response?.data || 'Error en el servidor al registrar.';
-      const errorMessage = typeof backendError === 'string' ? backendError : JSON.stringify(backendError);
+      console.error("Error completo:", err);
       
-      setError(`Rechazado por el backend: ${errorMessage}`);
-      console.error("Error completo:", err.response);
+      if (!err.response) {
+        setError("Error de red. Asegúrate de que el servidor (localhost:8080) esté en ejecución.");
+        return;
+      }
+
+      const status = err.response.status;
+      const data = err.response.data;
+      
+      console.error("Status:", status, "Data:", data);
+
+      // Show the raw response for debugging
+      if (data) {
+        // Handle Spring Boot Validation errors
+        if (data.errors && Array.isArray(data.errors)) {
+          const validationMessages = data.errors.map((e: any) => e.defaultMessage || e.msg).join(' - ');
+          setError(`Error de validación: ${validationMessages}`);
+          return;
+        }
+        
+        const backendError = data.message || data.error || JSON.stringify(data);
+        setError(`Error ${status}: ${backendError}`);
+      } else {
+        setError(`Error ${status} del servidor.`);
+      }
     } finally {
       setLoading(false);
     }
