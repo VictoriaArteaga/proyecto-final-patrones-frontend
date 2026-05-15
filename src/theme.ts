@@ -86,17 +86,22 @@ const theme = createTheme({
           },
         },
         containedPrimary: {
-          background: 'linear-gradient(45deg, #00B2CC 30%, #00E5FF 90%)',
+          backgroundColor: '#00B2CC',
+          backgroundImage: 'linear-gradient(45deg, #00B2CC 30%, #00E5FF 90%)',
           color: '#000',
+          '&:hover': {
+            backgroundColor: '#00E5FF',
+          },
         },
         containedSecondary: {
-          background: 'linear-gradient(45deg, #9E00C5 30%, #D500F9 90%)',
+          backgroundColor: '#9E00C5',
+          backgroundImage: 'linear-gradient(45deg, #9E00C5 30%, #D500F9 90%)',
           color: '#FFF',
           '&:hover': {
             boxShadow: '0 6px 20px rgba(213, 0, 249, 0.4)',
           },
         },
-      },
+      } as any,
     },
     MuiPaper: {
       styleOverrides: {
