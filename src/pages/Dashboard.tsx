@@ -1,10 +1,6 @@
-import { Typography, Container, Box, Button, Card, CardContent } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { Add as AddIcon, Architecture as ArchitectureIcon } from '@mui/icons-material';
+﻿import { Typography, Container, Box } from '@mui/material';
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 2, mb: 4 }}>
@@ -12,10 +8,10 @@ export default function Dashboard() {
           Panel de Proyectos
         </Typography>
         
-        {/* Aquí se listarán los proyectos próximamente */}
+        {/* Aqui se listaran los proyectos proximamente */}
         <Box sx={{ mt: 4 }}>
           <Typography variant="body1" color="text.secondary">
-            No tienes proyectos activos todavía. Comienza creando uno nuevo en la barra lateral.
+            No tienes proyectos activos todavia. Comienza creando uno nuevo en la barra lateral.
           </Typography>
         </Box>
       </Box>

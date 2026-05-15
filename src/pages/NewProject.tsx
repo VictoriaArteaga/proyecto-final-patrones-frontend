@@ -157,10 +157,12 @@ export default function NewProject() {
             {steps.map((label, index) => (
               <Step key={label}>
                 <StepLabel 
-                  StepIconProps={{
-                    sx: {
-                      '&.Mui-active': { color: '#D500F9' },
-                      '&.Mui-completed': { color: '#00E5FF' },
+                  slotProps={{
+                    stepIcon: {
+                      sx: {
+                        '&.Mui-active': { color: '#D500F9' },
+                        '&.Mui-completed': { color: '#00E5FF' },
+                      }
                     }
                   }}
                 >
