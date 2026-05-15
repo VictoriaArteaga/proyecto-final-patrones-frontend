@@ -14,6 +14,11 @@ export const authService = {
     // Nota: Revisa que la ruta '/register' sea la correcta según tu AuthController en Java
     const response = await api.post('/auth/register', userData);
     return response.data;
-  }
+  },
 
+  // Función para verificar cuenta
+  verify: async (token: string) => {
+    const response = await api.get(`/auth/verify?token=${token}`);
+    return response.data;
+  }
 };

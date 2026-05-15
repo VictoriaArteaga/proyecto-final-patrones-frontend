@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { 
   AppBar, Box, CssBaseline, Divider, Drawer, IconButton, 
   List, ListItem, ListItemButton, ListItemIcon, ListItemText, 
-  Toolbar, Typography, Button 
+  Toolbar, Typography, Button, Avatar 
 } from '@mui/material';
 import { 
   Menu as MenuIcon, 
   Dashboard as DashboardIcon, 
   AddBox as AddBoxIcon, 
-  Logout as LogoutIcon 
+  Logout as LogoutIcon,
+  AccountTree as AccountTreeIcon,
+  Architecture as ArchitectureIcon
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
-const drawerWidth = 240;
+const drawerWidth = 260;
 
 export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,47 +36,74 @@ export default function Layout() {
   ];
 
   const drawer = (
-    <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.paper' }}>
+      <Box sx={{ 
+        p: 3, 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 2,
+        background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.1) 0%, transparent 100%)'
+      }}>
+        <Avatar sx={{ bgcolor: 'primary.main', color: '#000' }}>
+          <ArchitectureIcon />
+        </Avatar>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.5px' }}>
           Arq-AI 3D
         </Typography>
-      </Toolbar>
-      <Divider />
-      <List>
+      </Box>
+      <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+      <List sx={{ px: 2, pt: 2, flexGrow: 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
+          <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
             <ListItemButton 
               selected={location.pathname === item.path}
               onClick={() => navigate(item.path)}
               sx={{
+                borderRadius: 2,
+                transition: 'all 0.2s',
                 '&.Mui-selected': {
-                  bgcolor: 'primary.light',
-                  color: 'primary.contrastText',
+                  bgcolor: 'rgba(0, 229, 255, 0.15)',
+                  color: 'primary.main',
                   '& .MuiListItemIcon-root': {
-                    color: 'primary.contrastText',
+                    color: 'primary.main',
+                  },
+                  '&:hover': {
+                    bgcolor: 'rgba(0, 229, 255, 0.25)',
                   }
+                },
+                '&:hover': {
+                  bgcolor: 'rgba(255, 255, 255, 0.05)',
                 }
               }}
             >
-              <ListItemIcon sx={{ color: location.pathname === item.path ? 'inherit' : 'text.secondary' }}>
+              <ListItemIcon sx={{ minWidth: 40, color: location.pathname === item.path ? 'primary.main' : 'text.secondary' }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemText 
+                primary={item.text} 
+                primaryTypographyProps={{ 
+                  fontWeight: location.pathname === item.path ? 700 : 500,
+                  fontSize: '0.95rem'
+                }} 
+              />
             </ListItemButton>
           </ListItem>
         ))}
       </List>
-      <Divider />
-      <List>
-        <ListItem disablePadding>
-          <ListItemButton onClick={handleLogout}>
-            <ListItemIcon><LogoutIcon color="error" /></ListItemIcon>
-            <ListItemText primary="Cerrar Sesión" sx={{ color: 'error.main' }} />
-          </ListItemButton>
-        </ListItem>
-      </List>
-    </div>
+      <Box sx={{ p: 2 }}>
+        <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.05)' }} />
+        <Button 
+          fullWidth 
+          variant="outlined" 
+          color="error" 
+          startIcon={<LogoutIcon />} 
+          onClick={handleLogout}
+          sx={{ borderRadius: 2, py: 1 }}
+        >
+          Cerrar Sesión
+        </Button>
+      </Box>
+    </Box>
   );
 
   return (
@@ -82,12 +111,14 @@ export default function Layout() {
       <CssBaseline />
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'background.paper',
+          bgcolor: 'rgba(10, 25, 41, 0.8)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
           color: 'text.primary',
-          boxShadow: 1
         }}
       >
         <Toolbar>
@@ -100,12 +131,9 @@ export default function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 500 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
             {menuItems.find(i => i.path === location.pathname)?.text || 'Aplicación'}
           </Typography>
-          <Button color="primary" onClick={handleLogout} sx={{ display: { xs: 'none', sm: 'block' } }}>
-            Salir
-          </Button>
         </Toolbar>
       </AppBar>
       <Box
@@ -120,7 +148,7 @@ export default function Layout() {
           ModalProps={{ keepMounted: true }}
           sx={{
             display: { xs: 'block', sm: 'none' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: 'none' },
           }}
         >
           {drawer}
@@ -129,7 +157,7 @@ export default function Layout() {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid rgba(255,255,255,0.05)' },
           }}
           open
         >
@@ -138,7 +166,12 @@ export default function Layout() {
       </Box>
       <Box
         component="main"
-        sx={{ flexGrow: 1, p: 3, width: { sm: `calc(100% - ${drawerWidth}px)` } }}
+        sx={{ 
+          flexGrow: 1, 
+          p: { xs: 2, sm: 4 }, 
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
+          minHeight: '100vh'
+        }}
       >
         <Toolbar />
         <Outlet />
