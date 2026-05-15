@@ -8,9 +8,7 @@ import {
   Menu as MenuIcon, 
   Dashboard as DashboardIcon, 
   AddBox as AddBoxIcon, 
-  Logout as LogoutIcon,
-  AccountTree as AccountTreeIcon,
-  Architecture as ArchitectureIcon
+  Logout as LogoutIcon
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -45,7 +43,7 @@ export default function Layout() {
         background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.1) 0%, transparent 100%)'
       }}>
         <Avatar sx={{ bgcolor: 'primary.main', color: '#000' }}>
-          <ArchitectureIcon />
+          <span style={{ fontSize: '1.5rem' }}>🏗️</span>
         </Avatar>
         <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.5px' }}>
           Arq-AI 3D
@@ -81,10 +79,14 @@ export default function Layout() {
               </ListItemIcon>
               <ListItemText 
                 primary={item.text} 
-                primaryTypographyProps={{ 
-                  fontWeight: location.pathname === item.path ? 700 : 500,
-                  fontSize: '0.95rem'
-                }} 
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontWeight: location.pathname === item.path ? 700 : 500,
+                      fontSize: '0.95rem'
+                    }
+                  }
+                }}
               />
             </ListItemButton>
           </ListItem>
