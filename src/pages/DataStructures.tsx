@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { 
-  Box, Container, Typography, Tabs, Tab, Card, CardContent, 
-  Grid, Paper, Divider, Chip
+  Box, Container, Typography, Tabs, Tab, Card, 
+  Grid, Paper, Chip
 } from '@mui/material';
 import {
   ViewList as ArrayIcon,
@@ -101,7 +101,7 @@ const VisualQueue = () => (
 export default function DataStructures() {
   const [value, setValue] = useState(0);
 
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
     setValue(newValue);
   };
 
@@ -160,7 +160,7 @@ export default function DataStructures() {
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 2 }}>
             <ArrayIcon fontSize="large" color="primary" /> Arrays (Arreglos)
           </Typography>
-          <Typography variant="body1" paragraph color="text.secondary">
+          <Typography variant="body1" component="p" sx={{ mb: 2, color: 'text.secondary' }}>
             Un array es una estructura de datos lineal que almacena elementos del mismo tipo en ubicaciones de memoria contiguas. 
             El tamaño del array se define en su creación (en lenguajes estáticos).
           </Typography>
@@ -168,7 +168,7 @@ export default function DataStructures() {
           <VisualArray />
 
           <Grid container spacing={3} sx={{ mt: 2 }}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Paper sx={{ p: 3, height: '100%', borderLeft: '4px solid #69F0AE' }}>
                 <Typography variant="h6" gutterBottom color="success.main">Ventajas</Typography>
                 <ul style={{ paddingLeft: 20 }}>
@@ -177,7 +177,7 @@ export default function DataStructures() {
                 </ul>
               </Paper>
             </Grid>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Paper sx={{ p: 3, height: '100%', borderLeft: '4px solid #FF5252' }}>
                 <Typography variant="h6" gutterBottom color="error.main">Desventajas</Typography>
                 <ul style={{ paddingLeft: 20 }}>
@@ -194,7 +194,7 @@ export default function DataStructures() {
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 2 }}>
             <StackIcon fontSize="large" color="secondary" /> Pilas (Stacks)
           </Typography>
-          <Typography variant="body1" paragraph color="text.secondary">
+          <Typography variant="body1" component="p" sx={{ mb: 2, color: 'text.secondary' }}>
             Una pila es una estructura de datos lineal que sigue el principio LIFO (Last In, First Out). 
             El último elemento agregado es el primero en ser retirado. Imagina una pila de platos.
           </Typography>
@@ -216,7 +216,7 @@ export default function DataStructures() {
           <Typography variant="h4" gutterBottom sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 2 }}>
             <QueueIcon fontSize="large" color="success" /> Colas (Queues)
           </Typography>
-          <Typography variant="body1" paragraph color="text.secondary">
+          <Typography variant="body1" component="p" sx={{ mb: 2, color: 'text.secondary' }}>
             Una cola es una estructura de datos lineal que sigue el principio FIFO (First In, First Out). 
             El primer elemento agregado es el primero en ser retirado. Como una fila en el supermercado.
           </Typography>
