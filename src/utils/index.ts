@@ -1,30 +1,25 @@
 /**
  * Índice de exportación de Estructuras de Datos
- * 
- * Importa cualquiera de estas estructuras así:
- * import { Queue, ProjectStateMachine, ProjectCache, Stack, LinkedList } from '@/utils/index';
+ * Solo clases especializadas para Arq-AI 3D (sin clases educativas genéricas)
  */
 
 // ============ FASE 1: CORE ============
 
-// QUEUE (COLA)
+// QUEUE ESPECIALIZADA
 export { 
-  Queue, 
   GenerationTaskQueue,
-  type QueueNode,
   type GenerationTask 
 } from './structures/Queue';
 
-// STATE MACHINE (GRAFO)
+// STATE MACHINE
 export { 
   ProjectStateMachine, 
   ProjectStateMachineManager,
   ProjectStatus,
-  type StateNode,
   type StateTransitionEvent 
 } from './structures/ProjectStateMachine';
 
-// CACHE (HASHMAP)
+// CACHE
 export { 
   ProjectCache, 
   UserProjectCacheManager,
@@ -35,22 +30,18 @@ export {
 
 // ============ FASE 2: UX AVANZADO ============
 
-// STACK (PILA)
+// STACK ESPECIALIZADO
 export { 
-  Stack, 
   UndoRedoManager, 
   StepNavigationManager,
   BoundedStack,
-  type StackNode,
   type WizardStepState 
 } from './structures/Stack';
 
-// LINKED LIST
+// LINKED LIST ESPECIALIZADO
 export { 
-  LinkedList, 
   ProjectHistory, 
   ProjectVersions,
-  type LinkedListNode,
   type ProjectHistoryItem 
 } from './structures/LinkedList';
 
@@ -78,21 +69,17 @@ export {
 
 // ============ FASE 3: BÚSQUEDA Y NAVEGACIÓN ============
 
-// BINARY SEARCH TREE
+// BINARY SEARCH TREE ESPECIALIZADO
 export { 
-  BinarySearchTree, 
   ProjectDateIndex, 
   ProjectNameIndex,
-  type BSTNode,
   type IndexedProject 
 } from './structures/BinarySearchTree';
 
-// DOUBLY LINKED LIST
+// DOUBLY LINKED LIST ESPECIALIZADO
 export { 
-  DoublyLinkedList, 
   ProjectGallery, 
   ProjectCarousel,
-  type DoublyLinkedListNode,
   type GalleryItem,
   type CarouselProject 
 } from './structures/DoublyLinkedList';

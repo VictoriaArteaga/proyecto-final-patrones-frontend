@@ -1,13 +1,8 @@
 /**
  * Ejemplos de uso de las estructuras de datos de Fase 1
- * 
- * Este archivo muestra cómo utilizar:
- * - Queue: Cola de tareas de generación
- * - ProjectStateMachine: Máquina de estados
- * - ProjectCache: Caché de proyectos
  */
 
-import { Queue, GenerationTask, GenerationTaskQueue } from './structures/Queue';
+import { GenerationTask, GenerationTaskQueue } from './structures/Queue';
 import { ProjectStatus, ProjectStateMachine, ProjectStateMachineManager } from './structures/ProjectStateMachine';
 import { ProjectCache, UserProjectCacheManager } from './cache/ProjectCache';
 import type { ProjectResponseDTO } from '../types/project.types';

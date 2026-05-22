@@ -1,20 +1,14 @@
 /**
  * Ejemplos de uso de las estructuras de datos de Fase 2
- * 
- * Este archivo muestra cómo utilizar:
- * - Stack: Undo/Redo y navegación
- * - LinkedList: Historial y versiones
  */
 
 import { 
-  Stack, 
   UndoRedoManager, 
   StepNavigationManager, 
   BoundedStack,
   type WizardStepState 
 } from './structures/Stack';
 import { 
-  LinkedList, 
   ProjectHistory, 
   ProjectVersions,
   type ProjectHistoryItem 
@@ -22,37 +16,7 @@ import {
 
 /**
  * ==========================================
- * EJEMPLO 1: Stack Básico
- * ==========================================
- */
-export function exampleStackBasic() {
-  const stack = new Stack<number>();
-
-  // Meter elementos
-  stack.push(10);
-  stack.push(20);
-  stack.push(30);
-
-  console.log('Stack:', stack.toArray()); // [30, 20, 10]
-  console.log('Cima:', stack.peek()); // 30
-
-  // Sacar elementos
-  console.log('Pop:', stack.pop()); // 30
-  console.log('Stack después:', stack.toArray()); // [20, 10]
-  console.log('Tamaño:', stack.getSize()); // 2
-  console.log('¿Vacío?', stack.isEmpty()); // false
-
-  // Buscar
-  const found = stack.find(x => x === 20);
-  console.log('Encontrado 20:', found); // 20
-
-  const index = stack.indexOf(x => x === 10);
-  console.log('Índice de 10:', index); // 1 (desde cima)
-}
-
-/**
- * ==========================================
- * EJEMPLO 2: Undo/Redo en Wizard
+ * EJEMPLO 1: Undo/Redo en Wizard
  * ==========================================
  */
 export function exampleUndoRedo() {
