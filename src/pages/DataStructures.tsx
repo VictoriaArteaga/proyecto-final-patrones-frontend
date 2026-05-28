@@ -52,7 +52,7 @@ const VisualArray = () => (
           width: 60, height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', 
           bgcolor: 'primary.dark', color: 'white', fontWeight: 'bold', fontSize: '1.2rem', borderRadius: 2,
           transition: 'all 0.3s',
-          '&:hover': { transform: 'scale(1.1)', bgcolor: 'primary.main', color: '#000' }
+          '&:hover': { transform: 'scale(1.1)', bgcolor: 'primary.main', color: '#fff' }
         }}>
           {val}
         </Paper>
