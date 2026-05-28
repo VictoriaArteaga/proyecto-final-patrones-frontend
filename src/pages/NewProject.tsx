@@ -43,14 +43,14 @@ const CustomConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.active}`]: {
     [`& .${stepConnectorClasses.line}`]: {
       backgroundImage:
-        'linear-gradient(95deg, #00E5FF 0%, #D500F9 100%)',
+        'linear-gradient(95deg, #6B9BD1 0%, #9E8DAD 100%)',
     },
   },
 
   [`&.${stepConnectorClasses.completed}`]: {
     [`& .${stepConnectorClasses.line}`]: {
       backgroundImage:
-        'linear-gradient(95deg, #00E5FF 0%, #D500F9 100%)',
+        'linear-gradient(95deg, #A8D8EA 0%, #E8D1E0 100%)',
     },
   },
 
@@ -58,8 +58,8 @@ const CustomConnector = styled(StepConnector)(({ theme }) => ({
     height: 3,
     border: 0,
     backgroundColor:
-      theme.palette.mode === 'dark'
-        ? theme.palette.grey[800]
+      theme.palette.mode === 'light'
+        ? '#E0E0E0'
         : '#eaeaf0',
     borderRadius: 1,
   },
@@ -336,11 +336,11 @@ export default function NewProject() {
                     stepIcon: {
                       sx: {
                         '&.Mui-active': {
-                          color: '#D500F9',
+                          color: '#9E8DAD',
                         },
 
                         '&.Mui-completed': {
-                          color: '#00E5FF',
+                          color: '#6B9BD1',
                         },
                       },
                     },
@@ -442,7 +442,7 @@ export default function NewProject() {
                   border: '2px dashed',
                   borderColor: selectedFile
                     ? 'primary.main'
-                    : 'rgba(255,255,255,0.2)',
+                    : 'rgba(107, 155, 209, 0.3)',
 
                   borderRadius: 4,
 
@@ -457,7 +457,7 @@ export default function NewProject() {
                   transition: 'all 0.3s',
 
                   bgcolor: selectedFile
-                    ? 'rgba(0, 229, 255, 0.05)'
+                    ? 'rgba(107, 155, 209, 0.05)'
                     : 'transparent',
 
                   '&:hover': {
@@ -467,7 +467,7 @@ export default function NewProject() {
 
                     bgcolor: loading
                       ? ''
-                      : 'rgba(0, 229, 255, 0.05)',
+                      : 'rgba(107, 155, 209, 0.08)',
                   },
                 }}
               >
@@ -565,12 +565,12 @@ export default function NewProject() {
                   overflow: 'hidden',
 
                   boxShadow:
-                    '0 8px 32px rgba(0,0,0,0.5)',
+                    '0 8px 32px rgba(44, 74, 109, 0.15)',
 
                   border:
-                    '1px solid rgba(255,255,255,0.1)',
+                    '1px solid rgba(107, 155, 209, 0.2)',
 
-                  bgcolor: 'rgba(0,0,0,0.2)',
+                  bgcolor: '#F8F9FA',
                 }}
               >
                 {project.image2DUrl ? (
