@@ -59,8 +59,10 @@ export default function VerifyAccount() {
           }}>
             {/* Animated top bar */}
             <Box sx={{ 
-              position: 'absolute', top: 0, left: 0, width: '100%', height: '4px', 
-              background: 'linear-gradient(90deg, #D500F9, #00E5FF)',
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '3px', 
+              background: `linear-gradient(90deg, #9E8DAD, #E8D1E0, #6B9BD1, #9E8DAD)`,
+              backgroundSize: '200% 100%',
+              animation: 'softGradient 6s ease infinite',
             }} />
 
             {status === 'loading' && (
