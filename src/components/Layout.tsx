@@ -40,16 +40,17 @@ export default function Layout() {
         display: 'flex', 
         alignItems: 'center', 
         gap: 2,
-        background: 'linear-gradient(180deg, rgba(0, 229, 255, 0.1) 0%, transparent 100%)'
+        background: `linear-gradient(135deg, rgba(107, 155, 209, 0.08) 0%, rgba(168, 216, 234, 0.05) 100%)`,
+        borderBottom: '1px solid rgba(107, 155, 209, 0.1)',
       }}>
-        <Avatar sx={{ bgcolor: 'primary.main', color: '#000' }}>
+        <Avatar sx={{ bgcolor: 'primary.main', color: '#FFFFFF', fontWeight: 700 }}>
           <span style={{ fontSize: '1.5rem' }}>🏗️</span>
         </Avatar>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'text.primary', letterSpacing: '-0.5px' }}>
+        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'primary.dark', letterSpacing: '-0.5px' }}>
           Arq-AI 3D
         </Typography>
       </Box>
-      <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
+      <Divider sx={{ borderColor: 'rgba(107, 155, 209, 0.1)' }} />
       <List sx={{ px: 2, pt: 2, flexGrow: 1 }}>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
@@ -60,17 +61,17 @@ export default function Layout() {
                 borderRadius: 2,
                 transition: 'all 0.2s',
                 '&.Mui-selected': {
-                  bgcolor: 'rgba(0, 229, 255, 0.15)',
+                  bgcolor: 'rgba(107, 155, 209, 0.12)',
                   color: 'primary.main',
                   '& .MuiListItemIcon-root': {
                     color: 'primary.main',
                   },
                   '&:hover': {
-                    bgcolor: 'rgba(0, 229, 255, 0.25)',
+                    bgcolor: 'rgba(107, 155, 209, 0.18)',
                   }
                 },
                 '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 0.05)',
+                  bgcolor: 'rgba(107, 155, 209, 0.06)',
                 }
               }}
             >
@@ -93,14 +94,14 @@ export default function Layout() {
         ))}
       </List>
       <Box sx={{ p: 2 }}>
-        <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.05)' }} />
+        <Divider sx={{ mb: 2, borderColor: 'rgba(107, 155, 209, 0.1)' }} />
         <Button 
           fullWidth 
-          variant="outlined" 
+          variant="contained" 
           color="error" 
           startIcon={<LogoutIcon />} 
           onClick={handleLogout}
-          sx={{ borderRadius: 2, py: 1 }}
+          sx={{ borderRadius: 2, py: 1, fontWeight: 600 }}
         >
           Cerrar Sesión
         </Button>
@@ -117,10 +118,11 @@ export default function Layout() {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: 'rgba(10, 25, 41, 0.8)',
+          bgcolor: '#FFFFFF',
           backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid rgba(107, 155, 209, 0.1)',
           color: 'text.primary',
+          boxShadow: '0 2px 8px rgba(44, 74, 109, 0.08)',
         }}
       >
         <Toolbar>
@@ -159,7 +161,7 @@ export default function Layout() {
           variant="permanent"
           sx={{
             display: { xs: 'none', sm: 'block' },
-            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid rgba(255,255,255,0.05)' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth, borderRight: '1px solid rgba(107, 155, 209, 0.1)' },
           }}
           open
         >
