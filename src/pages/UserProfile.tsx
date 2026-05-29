@@ -25,7 +25,8 @@ import { authService } from '../services/auth.service';
 import { getFriendlyError } from '../utils/errorMessages';
 import type { UserProfileDTO } from '../types/auth.types';
 
-// Clave local solo para la foto de perfil (el resto viene del backend).
+// Caché local de la foto: la fuente de verdad es el backend (profile.avatarUrl),
+// pero guardamos una copia para pintar al instante y como respaldo offline.
 const AVATAR_KEY = 'profileAvatar';
 
 const roleLabel = (role?: string) => {
@@ -46,6 +47,9 @@ export default function UserProfile() {
   const [avatar, setAvatar] = useState<string>(
     () => localStorage.getItem(AVATAR_KEY) || ''
   );
+  // Estados de la foto: guardando, y mensaje de éxito/info.
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -55,7 +59,17 @@ export default function UserProfile() {
     (async () => {
       try {
         const data = await authService.getProfile();
-        if (!cancelled) setProfile(data);
+        if (!cancelled) {
+          setProfile(data);
+          // El backend manda: sincronizamos la foto y la caché local.
+          if (data.avatarUrl) {
+            setAvatar(data.avatarUrl);
+            localStorage.setItem(AVATAR_KEY, data.avatarUrl);
+          } else {
+            setAvatar('');
+            localStorage.removeItem(AVATAR_KEY);
+          }
+        }
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -84,17 +98,69 @@ export default function UserProfile() {
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const result = reader.result as string;
+      const previous = avatar;
+
+      // Optimista: la mostramos ya y la cacheamos.
       setAvatar(result);
       localStorage.setItem(AVATAR_KEY, result);
+      setError('');
+      setAvatarMsg('');
+      setSavingAvatar(true);
+
+      try {
+        // Guardamos en el backend (ligado a la cuenta → visible en cualquier dispositivo).
+        const updated = await authService.updateAvatar(result);
+        const saved = updated.avatarUrl ?? result;
+        setAvatar(saved);
+        localStorage.setItem(AVATAR_KEY, saved);
+        setProfile(updated);
+        setAvatarMsg('Foto de perfil actualizada.');
+      } catch (err) {
+        // Si el backend falla, revertimos para no engañar al usuario.
+        setAvatar(previous);
+        if (previous) localStorage.setItem(AVATAR_KEY, previous);
+        else localStorage.removeItem(AVATAR_KEY);
+        setError(
+          getFriendlyError(
+            err,
+            'No pudimos guardar tu foto en el servidor. Inténtalo de nuevo.'
+          )
+        );
+      } finally {
+        setSavingAvatar(false);
+      }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleRemoveAvatar = () => {
+  const handleRemoveAvatar = async () => {
+    const previous = avatar;
+
     setAvatar('');
     localStorage.removeItem(AVATAR_KEY);
+    setError('');
+    setAvatarMsg('');
+    setSavingAvatar(true);
+
+    try {
+      await authService.deleteAvatar();
+      setProfile((p) => (p ? { ...p, avatarUrl: null } : p));
+      setAvatarMsg('Foto de perfil eliminada.');
+    } catch (err) {
+      // Revertimos si el backend no pudo eliminarla.
+      setAvatar(previous);
+      if (previous) localStorage.setItem(AVATAR_KEY, previous);
+      setError(
+        getFriendlyError(
+          err,
+          'No pudimos eliminar tu foto en el servidor. Inténtalo de nuevo.'
+        )
+      );
+    } finally {
+      setSavingAvatar(false);
+    }
   };
 
   const getInitials = (name?: string) =>
@@ -266,17 +332,25 @@ export default function UserProfile() {
                   size="small"
                   variant="contained"
                   color="secondary"
-                  startIcon={<PhotoCameraIcon />}
+                  disabled={savingAvatar}
+                  startIcon={
+                    savingAvatar ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : (
+                      <PhotoCameraIcon />
+                    )
+                  }
                   onClick={handleAvatarClick}
                   sx={{ borderRadius: 2 }}
                 >
-                  Cambiar foto
+                  {savingAvatar ? 'Guardando...' : 'Cambiar foto'}
                 </Button>
                 {avatar && (
                   <Button
                     size="small"
                     variant="outlined"
                     color="secondary"
+                    disabled={savingAvatar}
                     startIcon={<DeleteIcon />}
                     onClick={handleRemoveAvatar}
                     sx={{ borderRadius: 2 }}
@@ -285,6 +359,17 @@ export default function UserProfile() {
                   </Button>
                 )}
               </Box>
+
+              {/* Aviso de éxito al guardar/eliminar la foto */}
+              {avatarMsg && (
+                <Alert
+                  severity="success"
+                  sx={{ mt: 2, borderRadius: 2, width: '100%' }}
+                  onClose={() => setAvatarMsg('')}
+                >
+                  {avatarMsg}
+                </Alert>
+              )}
             </Box>
 
             <Divider sx={{ mb: 1 }} />
