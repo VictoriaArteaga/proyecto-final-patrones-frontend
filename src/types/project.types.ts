@@ -9,6 +9,7 @@ export interface ProjectResponseDTO {
   name: string;
   status: string;
   category: DesignCategory | null;
+  imageOriginalUrl: string | null;
   image2DUrl: string | null;
   model3DUrl: string | null;
   createdAt: string;
