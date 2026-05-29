@@ -29,7 +29,7 @@ export default function Login() {
       const response = await authService.login(credentials);
       
       localStorage.setItem('token', response.token);
-      navigate('/dashboard');
+      navigate('/new-project');
       
     } catch (err: any) {
       setError(

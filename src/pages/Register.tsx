@@ -66,8 +66,8 @@ export default function Register() {
       
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+        navigate('/new-project');
+      }, 1500);
       
     } catch (err: any) {
       console.error("Error completo:", err);
@@ -175,7 +175,7 @@ export default function Register() {
               <Stack spacing={2}>
                 {[
                   { icon: '✿', text: 'Generación modelos 2D y 3D' },
-                  { icon: '✿', text: 'Procesamiento rápido' },
+            
                 ].map((benefit, idx) => (
                   <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ fontSize: '1.5rem' }}>{benefit.icon}</Box>
@@ -225,7 +225,7 @@ export default function Register() {
             )}
             {success && (
               <Alert severity="success" variant="filled" sx={{ mb: 3, width: '100%', borderRadius: 2 }}>
-                ¡Registro exitoso! Llevándote al Login...
+                ¡Registro exitoso! Llevándote a crear tu primer proyecto...
               </Alert>
             )}
 
