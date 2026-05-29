@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AppBar, Box, CssBaseline, Divider, Drawer, IconButton,
   List, ListItem, ListItemButton, ListItemIcon, ListItemText,
@@ -20,6 +20,9 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationsContext';
 import type { NotificationType } from '../context/NotificationsContext';
+import { authService } from '../services/auth.service';
+
+const AVATAR_KEY = 'profileAvatar';
 
 // Formatea el tiempo transcurrido de forma humana.
 const timeAgo = (ts: number): string => {
@@ -46,8 +49,32 @@ export default function Layout() {
   const { notifications, unreadCount, markAllRead } = useNotifications();
   const [notifAnchor, setNotifAnchor] = useState<null | HTMLElement>(null);
 
-  // Foto de perfil (guardada localmente por la vista "Mi perfil").
-  const avatarSrc = localStorage.getItem('profileAvatar') || '';
+  // Foto de perfil: caché local para pintar al instante + sincronización con el backend.
+  const [avatarSrc, setAvatarSrc] = useState<string>(
+    () => localStorage.getItem(AVATAR_KEY) || ''
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await authService.getProfile();
+        if (cancelled) return;
+        if (profile.avatarUrl) {
+          setAvatarSrc(profile.avatarUrl);
+          localStorage.setItem(AVATAR_KEY, profile.avatarUrl);
+        } else {
+          setAvatarSrc('');
+          localStorage.removeItem(AVATAR_KEY);
+        }
+      } catch {
+        // Sin backend: nos quedamos con lo que haya en la caché local.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleOpenNotif = (e: React.MouseEvent<HTMLElement>) => {
     setNotifAnchor(e.currentTarget);
