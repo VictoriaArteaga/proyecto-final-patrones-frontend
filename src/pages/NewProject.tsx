@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -165,6 +165,17 @@ export default function NewProject() {
   const [success, setSuccess] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Create an Object URL from the uploaded file for the 3D background
+  const backgroundImageUrl = useMemo(() => {
+    if (project?.imageOriginalUrl) {
+      return project.imageOriginalUrl;
+    }
+    if (selectedFile) {
+      return URL.createObjectURL(selectedFile);
+    }
+    return '';
+  }, [selectedFile, project?.imageOriginalUrl]);
 
   // =========================
   // REANUDAR PROYECTO EN CURSO 
@@ -1101,12 +1112,28 @@ export default function NewProject() {
                     </Typography>
                   </Alert>
 
-                  <Box sx={{ width: '100%', mb: 4 }}>
+                  {/* ── 3D Viewer ── */}
+                  <Box sx={{ mb: 4 }}>
                     <ModelViewer
                       modelUrl={project.model3DUrl}
-                      backgroundImageUrl={project.imageOriginalUrl || ''}
+                      backgroundImageUrl={backgroundImageUrl}
                     />
                   </Box>
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    href={project.model3DUrl}
+                    target="_blank"
+                    size="large"
+                    sx={{
+                      px: 6,
+                      py: 2,
+                      fontSize: '1.2rem',
+                    }}
+                  >
+                    Descargar Modelo 3D (.glb)
+                  </Button>
 
                   <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
                     <Button
