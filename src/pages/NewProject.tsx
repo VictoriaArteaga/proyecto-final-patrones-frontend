@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -165,6 +165,17 @@ export default function NewProject() {
   const [success, setSuccess] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Create an Object URL from the uploaded file for the 3D background
+  const backgroundImageUrl = useMemo(() => {
+    if (project?.imageOriginalUrl) {
+      return project.imageOriginalUrl;
+    }
+    if (selectedFile) {
+      return URL.createObjectURL(selectedFile);
+    }
+    return '';
+  }, [selectedFile, project?.imageOriginalUrl]);
 
   // =========================
   // REANUDAR PROYECTO EN CURSO 
@@ -1068,9 +1079,21 @@ export default function NewProject() {
                   <Typography
                     variant="h6"
                     color="primary"
+                    sx={{ mb: 3 }}
                   >
                     Procesando modelo 3D...
                   </Typography>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      localStorage.removeItem(ACTIVE_PROJECT_KEY);
+                      resetFlow();
+                    }}
+                  >
+                    Cancelar y crear nuevo proyecto
+                  </Button>
                 </Box>
               )}
 
