@@ -25,8 +25,9 @@ import {
   Close as CloseIcon,
   AutoAwesome as AutoAwesomeIcon,
   Apartment as ApartmentIcon,
-  Weekend as WeekendIcon,
   Chair as ChairIcon,
+  TuneRounded as TuneRoundedIcon,
+  ImageRounded as ImageRoundedIcon,
 } from '@mui/icons-material';
 
 import { projectService } from '../services/project.service';
@@ -68,16 +69,6 @@ const categories: {
       'Ej: Casa moderna de 4 pisos con piscina, grandes ventanales y jardín.',
   },
   {
-    value: 'INTERIOR_ROOM',
-    title: 'Espacio Interior',
-    description: 'Salas, cuartos, cocinas',
-    icon: WeekendIcon,
-    color: '#9E8DAD', // softPurple
-    promptLabel: 'Describe el espacio interior que deseas generar',
-    promptPlaceholder:
-      'Ej: Sala estilo escandinavo, tonos claros, sofá gris y plantas.',
-  },
-  {
     value: 'FURNITURE_ITEM',
     title: 'Mueble u Objeto',
     description: 'Muebles y objetos',
@@ -112,13 +103,6 @@ const CATEGORY_PARAM_FIELDS: Record<DesignCategory, ParamField[]> = {
     { key: 'lotLength', label: 'Largo del lote (m)', type: 'number' },
     { key: 'totalArea', label: 'Área total (m²)', type: 'number' },
     { key: 'additionalElements', label: 'Elementos adicionales', type: 'list', placeholder: 'Separados por coma: piscina, jardín, garaje' },
-  ],
-  INTERIOR_ROOM: [
-    { key: 'roomType', label: 'Tipo de espacio', type: 'text', required: true, placeholder: 'Ej: sala, cuarto, cocina' },
-    { key: 'styleTrend', label: 'Estilo o tendencia', type: 'text', placeholder: 'Ej: escandinavo, industrial, minimalista' },
-    { key: 'color', label: 'Paleta de color', type: 'text', placeholder: 'Ej: tonos tierra y crema' },
-    { key: 'materials', label: 'Materiales', type: 'text', placeholder: 'Ej: madera, tela, metal' },
-    { key: 'additionalElements', label: 'Elementos adicionales', type: 'list', placeholder: 'Separados por coma: plantas, alfombra, cuadros' },
   ],
   FURNITURE_ITEM: [
     { key: 'furnitureType', label: 'Tipo de mueble u objeto', type: 'text', required: true, placeholder: 'Ej: estantería, sofá, mesa, lámpara' },
@@ -680,7 +664,7 @@ export default function NewProject() {
         pointerEvents: 'none',
       }
     }}>
-      <Container maxWidth={activeStep === 2 ? 'lg' : 'md'} sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', py: 4 }}>
+      <Container maxWidth={activeStep === 0 ? 'md' : 'lg'} sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', py: 4 }}>
       <Card
         sx={{
           mt: 4,
@@ -855,7 +839,7 @@ export default function NewProject() {
                   display: 'grid',
                   gridTemplateColumns: {
                     xs: '1fr',
-                    sm: 'repeat(3, 1fr)',
+                    sm: 'repeat(2, 1fr)',
                   },
                   gap: 1.5,
                   mb: 4,
@@ -1157,90 +1141,161 @@ export default function NewProject() {
                   otra vez).
                 </Typography>
 
-                {/* DOS COLUMNAS: formulario (izq) + última imagen generada (der) */}
+                {/* DOS COLUMNAS: formulario (izq, protagonista) + imagen (der) */}
                 <Box
                   sx={{
                     display: 'flex',
                     flexDirection: { xs: 'column', md: 'row' },
                     gap: 4,
-                    alignItems: 'flex-start',
+                    alignItems: 'stretch',
                     mb: 4,
                   }}
                 >
-                  {/* IZQUIERDA: parámetros */}
-                  <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-                    <TextField
-                      fullWidth
-                      multiline
-                      rows={4}
-                      label="Describe con más detalle lo que quieres"
-                      placeholder="Ej: igual pero con más ventanas y fachada en piedra clara."
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      slotProps={{
-                        htmlInput: { maxLength: 300 },
-                        formHelperText: { sx: { textAlign: 'right', mr: 0 } },
-                      }}
-                      helperText={`${description.length}/300`}
-                      sx={{ mb: 3 }}
-                      disabled={loading}
-                    />
-
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 700, mb: 1.5 }}
-                    >
-                      Parámetros del diseño
-                    </Typography>
-
+                  {/* IZQUIERDA: panel de parámetros */}
+                  <Box sx={{ flex: { md: 5 }, minWidth: 0, width: '100%' }}>
                     <Box
                       sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-                        gap: 2,
+                        height: '100%',
+                        p: { xs: 2.5, sm: 4 },
+                        borderRadius: 4,
+                        bgcolor: 'rgba(255, 255, 255, 0.7)',
+                        border: '1px solid rgba(107, 155, 209, 0.25)',
+                        boxShadow: '0 8px 32px rgba(44, 74, 109, 0.08)',
+                        backdropFilter: 'blur(8px)',
                       }}
                     >
-                      {(project.category
-                        ? CATEGORY_PARAM_FIELDS[project.category]
-                        : []
-                      ).map((field) => (
-                        <TextField
-                          key={field.key}
-                          fullWidth
-                          label={`${field.label}${field.required ? ' *' : ''}`}
-                          placeholder={field.placeholder}
-                          type={
-                            field.type === 'number' || field.type === 'int'
-                              ? 'number'
-                              : 'text'
-                          }
-                          value={params[field.key] || ''}
-                          onChange={(e) =>
-                            setParams((prev) => ({
-                              ...prev,
-                              [field.key]: e.target.value,
-                            }))
-                          }
-                          disabled={loading}
-                          error={
-                            !!field.required &&
-                            !(params[field.key] || '').trim()
-                          }
-                        />
-                      ))}
+                      {/* Encabezado del panel */}
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          mb: 0.5,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 44,
+                            height: 44,
+                            borderRadius: 2.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background:
+                              'linear-gradient(135deg, #6B9BD1 0%, #9E8DAD 100%)',
+                            color: '#fff',
+                            boxShadow: '0 4px 14px rgba(107, 155, 209, 0.4)',
+                          }}
+                        >
+                          <TuneRoundedIcon />
+                        </Box>
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+                            Parámetros del diseño
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Ajústalos para guiar a la IA
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          height: '1px',
+                          bgcolor: 'rgba(107, 155, 209, 0.2)',
+                          my: 3,
+                        }}
+                      />
+
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        label="Describe con más detalle lo que quieres"
+                        placeholder="Ej: igual pero con más ventanas y fachada en piedra clara."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        slotProps={{
+                          htmlInput: { maxLength: 300 },
+                          formHelperText: { sx: { textAlign: 'right', mr: 0 } },
+                        }}
+                        helperText={`${description.length}/300`}
+                        sx={{ mb: 3 }}
+                        disabled={loading}
+                      />
+
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                          gap: 2.5,
+                        }}
+                      >
+                        {(project.category
+                          ? CATEGORY_PARAM_FIELDS[project.category]
+                          : []
+                        ).map((field) => (
+                          <TextField
+                            key={field.key}
+                            fullWidth
+                            label={`${field.label}${field.required ? ' *' : ''}`}
+                            placeholder={field.placeholder}
+                            type={
+                              field.type === 'number' || field.type === 'int'
+                                ? 'number'
+                                : 'text'
+                            }
+                            value={params[field.key] || ''}
+                            onChange={(e) =>
+                              setParams((prev) => ({
+                                ...prev,
+                                [field.key]: e.target.value,
+                              }))
+                            }
+                            disabled={loading}
+                            error={
+                              !!field.required &&
+                              !(params[field.key] || '').trim()
+                            }
+                            sx={{
+                              '& .MuiInputBase-root': { bgcolor: 'rgba(255,255,255,0.6)' },
+                            }}
+                          />
+                        ))}
+                      </Box>
                     </Box>
                   </Box>
 
                   {/* DERECHA: última imagen generada por la IA */}
-                  <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 700, mb: 1.5 }}
-                    >
-                      Diseño actual
-                    </Typography>
+                  <Box
+                    sx={{
+                      flex: { md: 7 },
+                      minWidth: 0,
+                      width: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
                     <Box
                       sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 1.5,
+                      }}
+                    >
+                      <ImageRoundedIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+                      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                        Diseño actual
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minHeight: 320,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                         borderRadius: 4,
                         overflow: 'hidden',
                         boxShadow: '0 8px 32px rgba(44, 74, 109, 0.15)',
@@ -1253,21 +1308,16 @@ export default function NewProject() {
                           component="img"
                           image={project.image2DUrl}
                           alt="Último diseño generado"
-                          sx={{ width: '100%', maxHeight: 460, objectFit: 'contain' }}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                          }}
                         />
                       ) : (
-                        <Box
-                          sx={{
-                            height: 400,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          <Typography color="text.secondary">
-                            Imagen no disponible
-                          </Typography>
-                        </Box>
+                        <Typography color="text.secondary">
+                          Imagen no disponible
+                        </Typography>
                       )}
                     </Box>
                   </Box>
@@ -1352,61 +1402,102 @@ export default function NewProject() {
                     display: 'flex',
                     flexDirection: { xs: 'column', md: 'row' },
                     gap: 4,
-                    alignItems: 'flex-start',
+                    alignItems: 'stretch',
                     mb: 4,
                   }}
                 >
-                  <Box sx={{ flex: { md: '0 0 280px' }, width: '100%' }}>
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 700, mb: 1.5 }}
-                    >
-                      Parámetros usados
-                    </Typography>
+                  <Box sx={{ flex: { md: 5 }, minWidth: 0, width: '100%' }}>
                     <Box
-                      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                      sx={{
+                        height: '100%',
+                        p: { xs: 2.5, sm: 3 },
+                        borderRadius: 4,
+                        bgcolor: 'rgba(255, 255, 255, 0.7)',
+                        border: '1px solid rgba(107, 155, 209, 0.25)',
+                        boxShadow: '0 8px 32px rgba(44, 74, 109, 0.08)',
+                        backdropFilter: 'blur(8px)',
+                      }}
                     >
-                      {usedParamRows.length > 0 ? (
-                        usedParamRows.map((row) => (
-                          <Box
-                            key={row.label}
-                            sx={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              gap: 2,
-                              p: 1.25,
-                              borderRadius: 2,
-                              bgcolor: 'rgba(107, 155, 209, 0.08)',
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              sx={{ fontWeight: 600 }}
-                            >
-                              {row.label}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{ fontWeight: 700, textAlign: 'right' }}
-                            >
-                              {row.value}
-                            </Typography>
-                          </Box>
-                        ))
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          Sin parámetros adicionales.
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          mb: 2.5,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            borderRadius: 2.5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background:
+                              'linear-gradient(135deg, #6B9BD1 0%, #9E8DAD 100%)',
+                            color: '#fff',
+                            boxShadow: '0 4px 14px rgba(107, 155, 209, 0.4)',
+                          }}
+                        >
+                          <TuneRoundedIcon sx={{ fontSize: 22 }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 800 }}>
+                          Parámetros usados
                         </Typography>
-                      )}
+                      </Box>
+                      <Box
+                        sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}
+                      >
+                        {usedParamRows.length > 0 ? (
+                          usedParamRows.map((row) => (
+                            <Box
+                              key={row.label}
+                              sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: 2,
+                                px: 1.75,
+                                py: 1.5,
+                                borderRadius: 2.5,
+                                bgcolor: 'rgba(107, 155, 209, 0.08)',
+                                border: '1px solid rgba(107, 155, 209, 0.12)',
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ fontWeight: 600 }}
+                              >
+                                {row.label}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontWeight: 700, textAlign: 'right' }}
+                              >
+                                {row.value}
+                              </Typography>
+                            </Box>
+                          ))
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            Sin parámetros adicionales.
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
                   </Box>
 
                   <Box
                     sx={{
-                      flex: 1,
+                      flex: { md: 7 },
                       minWidth: 0,
                       width: '100%',
+                      minHeight: 320,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
                       borderRadius: 4,
                       overflow: 'hidden',
                       boxShadow: '0 8px 32px rgba(44, 74, 109, 0.15)',
@@ -1419,21 +1510,12 @@ export default function NewProject() {
                         component="img"
                         image={project.image2DUrl}
                         alt="Render 2D"
-                        sx={{ width: '100%', maxHeight: 460, objectFit: 'contain' }}
+                        sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     ) : (
-                      <Box
-                        sx={{
-                          height: 400,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Typography color="text.secondary">
-                          Imagen no disponible
-                        </Typography>
-                      </Box>
+                      <Typography color="text.secondary">
+                        Imagen no disponible
+                      </Typography>
                     )}
                   </Box>
                 </Box>

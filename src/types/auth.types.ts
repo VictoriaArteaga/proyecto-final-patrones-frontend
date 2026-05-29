@@ -10,7 +10,8 @@ export interface RegisterRequestDTO {
 }
 
 export interface AuthResponseDTO {
-  token: string;
+  // El JWT ya NO viaja en el cuerpo: el backend lo fija en una cookie HttpOnly.
+  token?: string | null;
   message?: string;
 }
 

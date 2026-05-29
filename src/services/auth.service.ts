@@ -22,6 +22,11 @@ export const authService = {
     return response.data;
   },
 
+  // Cierra sesión: el backend borra la cookie HttpOnly del navegador.
+  logout: async () => {
+    await api.post('/auth/logout');
+  },
+
   // Datos del usuario autenticado (para "Mi perfil")
   getProfile: async (): Promise<UserProfileDTO> => {
     const response = await api.get<UserProfileDTO>('/users/me');
