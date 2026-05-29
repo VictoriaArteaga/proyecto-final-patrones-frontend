@@ -407,7 +407,7 @@ export default function NewProject() {
       setProject(updated);
 
       setSuccess(
-        '¡Generación 3D iniciada! El proceso continúa aunque cambies de ventana.'
+        '¡Generación 3D iniciada!'
       );
     } catch (err: any) {
       setError(
@@ -423,12 +423,49 @@ export default function NewProject() {
     categories.find((c) => c.value === category) ?? null;
 
   return (
-    <Container maxWidth="md">
+    <Box sx={{ 
+      minHeight: 'calc(100vh - 64px)',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      background: `
+        radial-gradient(circle at 20% 30%, rgba(107, 155, 209, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(158, 141, 173, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 10% 80%, rgba(168, 216, 234, 0.1) 0%, transparent 40%),
+        linear-gradient(135deg, #F8F9FA 0%, #E8D1E0 10%, #A8D8EA 100%)
+      `,
+      backgroundAttachment: 'fixed',
+      backgroundSize: '200% 200%, 200% 200%, 200% 200%, 100% 100%',
+      animation: 'vivoBgMove 6s ease infinite',
+      position: 'relative',
+      overflow: 'auto',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 70% 20%, rgba(44, 74, 109, 0.08) 0%, transparent 50%),
+          radial-gradient(circle at 30% 60%, rgba(232, 209, 224, 0.1) 0%, transparent 50%)
+        `,
+        animation: 'vivoBgMove 8s ease-in-out infinite reverse',
+        backgroundSize: '200% 200%',
+        zIndex: 0,
+        pointerEvents: 'none',
+      }
+    }}>
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', py: 4 }}>
       <Card
         sx={{
           mt: 4,
           overflow: 'visible',
           animation: 'fadeIn 0.8s ease-out forwards',
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
         }}
       >
         <CardContent sx={{ p: { xs: 3, sm: 5 } }}>
@@ -457,7 +494,7 @@ export default function NewProject() {
                 letterSpacing: '-0.5px',
               }}
             >
-              Generador de Casa 3D
+              Generador 3D
             </Typography>
 
             <AutoAwesomeIcon
@@ -1080,6 +1117,7 @@ export default function NewProject() {
           )}
         </CardContent>
       </Card>
-    </Container>
+      </Container>
+    </Box>
   );
 }

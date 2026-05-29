@@ -28,7 +28,7 @@ export default function Login() {
       const response = await authService.login(credentials);
       
       localStorage.setItem('token', response.token);
-      navigate('/dashboard');
+      navigate('/new-project');
       
     } catch (err: any) {
       const message = err.response?.data?.message || 'Credenciales incorrectas o el servidor no responde.';
