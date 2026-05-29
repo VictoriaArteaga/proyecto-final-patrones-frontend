@@ -1482,7 +1482,7 @@ export default function NewProject() {
               >
                 <Button
                   variant="outlined"
-                  color="error"
+                  color="secondary"
                   startIcon={<CloseIcon />}
                   onClick={handleReject2D}
                   disabled={loading}
@@ -1499,16 +1499,13 @@ export default function NewProject() {
 
                 <Button
                   variant="contained"
-                  color="success"
+                  color="primary"
                   startIcon={<CheckIcon />}
                   onClick={handleApprove2D}
                   disabled={loading}
                   sx={{
                     px: 4,
                     py: 1.5,
-                    background:
-                      'linear-gradient(45deg, #00C853 30%, #69F0AE 90%)',
-                    color: '#000',
                   }}
                 >
                   {loading ? (
@@ -1596,7 +1593,7 @@ export default function NewProject() {
 
                   <Button
                     variant="outlined"
-                    color="error"
+                    color="secondary"
                     onClick={handleCancel3D}
                   >
                     Detener generación

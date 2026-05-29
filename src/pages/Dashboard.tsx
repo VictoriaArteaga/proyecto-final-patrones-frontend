@@ -559,7 +559,7 @@ export default function Dashboard() {
 
                     <Button
                       size="small"
-                      color="error"
+                      color="secondary"
                       startIcon={<FilterAltOffIcon />}
                       onClick={clearAllFilters}
                       sx={{ ml: 'auto' }}
@@ -819,7 +819,7 @@ export default function Dashboard() {
             onClick={confirmDelete}
             disabled={deleting}
             variant="contained"
-            color="error"
+            color="secondary"
             startIcon={
               deleting ? (
                 <CircularProgress size={18} color="inherit" />

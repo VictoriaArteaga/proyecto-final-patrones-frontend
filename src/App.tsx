@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
+import './App.css';
 import theme from './theme';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
