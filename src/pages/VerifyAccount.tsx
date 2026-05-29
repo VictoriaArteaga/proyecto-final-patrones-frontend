@@ -9,6 +9,7 @@ import {
   MarkEmailRead as EmailIcon
 } from '@mui/icons-material';
 import { authService } from '../services/auth.service';
+import { getFriendlyError } from '../utils/errorMessages';
 
 export default function VerifyAccount() {
   const [searchParams] = useSearchParams();
@@ -26,11 +27,16 @@ export default function VerifyAccount() {
       try {
         const response = await authService.verify(token);
         setStatus('success');
-        setMessage(response || '¡Cuenta verificada exitosamente!');
+        setMessage(response || '¡Tu cuenta quedó verificada! Ya puedes iniciar sesión.');
       } catch (err: any) {
         console.error(err);
         setStatus('error');
-        setMessage(err.response?.data?.message || 'Error al verificar la cuenta. El token podría ser inválido o haber expirado.');
+        setMessage(
+          getFriendlyError(
+            err,
+            'El enlace de verificación no es válido o ya expiró. Regístrate de nuevo para recibir uno nuevo.'
+          )
+        );
       }
     };
 

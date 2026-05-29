@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Login as LoginIcon, Mail as MailIcon, Lock as LockIcon } from '@mui/icons-material';
 import { authService } from '../services/auth.service';
+import { getFriendlyError } from '../utils/errorMessages';
 import type { LoginRequestDTO } from '../types/auth.types';
 
 export default function Login() {
@@ -31,8 +32,9 @@ export default function Login() {
       navigate('/new-project');
       
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Credenciales incorrectas o el servidor no responde.';
-      setError(message);
+      setError(
+        getFriendlyError(err, 'Correo o contraseña incorrectos. Verifícalos e inténtalo de nuevo.')
+      );
     } finally {
       setLoading(false);
     }
