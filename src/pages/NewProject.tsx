@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 
 import { projectService } from '../services/project.service';
+import { getFriendlyError } from '../utils/errorMessages';
 import type {
   DesignCategory,
   ProjectResponseDTO,
@@ -167,7 +168,7 @@ export default function NewProject() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // =========================
-  // REANUDAR PROYECTO EN CURSO (al montar)
+  // REANUDAR PROYECTO EN CURSO 
   // =========================
   // Si dejamos un proyecto a medias (en otra pestaña/recarga), lo recuperamos
   // del backend, que es la fuente de verdad: persiste status, image2DUrl y model3DUrl.
@@ -226,17 +227,19 @@ export default function NewProject() {
         if (updated.model3DUrl) {
           setActiveStep(2);
           setLoading(false);
-          setSuccess('¡Modelo 3D generado con éxito!');
+          setSuccess('¡Tu modelo 3D ya está listo!');
         } else if (updated.status === 'WAITING_2D_APPROVAL') {
           setActiveStep(1);
           setLoading(false);
-          setSuccess('Render 2D generado correctamente.');
+          setSuccess('¡Tu diseño 2D ya está listo! Revísalo abajo.');
         } else if (
           updated.status === 'FAILED' ||
           updated.status === 'ERROR'
         ) {
           setLoading(false);
-          setError('Error durante la generación.');
+          setError(
+            'No pudimos completar la generación. Por favor, inténtalo de nuevo.'
+          );
         }
       } catch (err) {
         console.error('Error consultando el estado del proyecto', err);
@@ -320,16 +323,17 @@ export default function NewProject() {
 
       setProject(projectWith2D);
 
-      setSuccess('Render 2D generado correctamente.');
+      setSuccess('¡Tu diseño 2D ya está listo! Revísalo abajo.');
 
       setActiveStep(1);
     } catch (err: any) {
       console.error(err);
 
       setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Error al procesar la imagen.'
+        getFriendlyError(
+          err,
+          'No pudimos procesar tu imagen. Revisa que sea JPG o PNG e inténtalo de nuevo.'
+        )
       );
     } finally {
       setLoading(false);
@@ -354,8 +358,7 @@ export default function NewProject() {
       setActiveStep(2);
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          'Error al aprobar el diseño.'
+        getFriendlyError(err, 'No pudimos aprobar el diseño. Inténtalo de nuevo.')
       );
     } finally {
       setLoading(false);
@@ -378,12 +381,11 @@ export default function NewProject() {
       resetFlow();
 
       setError(
-        'El diseño fue rechazado. Intenta subir otra imagen.'
+        'Descartaste el diseño. Sube otra imagen para intentarlo de nuevo.'
       );
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          'Error al rechazar el diseño.'
+        getFriendlyError(err, 'No pudimos descartar el diseño. Inténtalo de nuevo.')
       );
       setLoading(false);
     }
@@ -407,12 +409,14 @@ export default function NewProject() {
       setProject(updated);
 
       setSuccess(
-        '¡Generación 3D iniciada!'
+        'Estamos creando tu modelo 3D. Esto puede tardar un poco; puedes seguir usando la app y aquí verás el resultado al terminar.'
       );
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          'Error al iniciar la generación 3D.'
+        getFriendlyError(
+          err,
+          'No pudimos iniciar la creación del modelo 3D. Inténtalo de nuevo.'
+        )
       );
 
       setLoading(false);
