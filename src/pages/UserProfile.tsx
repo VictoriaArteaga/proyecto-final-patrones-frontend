@@ -7,113 +7,174 @@ import {
   Avatar,
   Divider,
   Button,
+  Chip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   PhotoCamera as PhotoCameraIcon,
   Delete as DeleteIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  Badge as BadgeIcon,
+  MarkEmailRead as RecoveryIcon,
+  VerifiedUser as VerifiedUserIcon,
 } from '@mui/icons-material';
 
+import { authService } from '../services/auth.service';
+import { getFriendlyError } from '../utils/errorMessages';
+import type { UserProfileDTO } from '../types/auth.types';
+
+// Clave local solo para la foto de perfil (el resto viene del backend).
+const AVATAR_KEY = 'profileAvatar';
+
+const roleLabel = (role?: string) => {
+  switch (role) {
+    case 'ADMIN':
+      return 'Administrador';
+    case 'USER':
+      return 'Usuario';
+    default:
+      return role || '—';
+  }
+};
+
 export default function UserProfile() {
-  const [userData, setUserData] = useState({
-    username: '',
-    email: '',
-    avatar: '',
-  });
+  const [profile, setProfile] = useState<UserProfileDTO | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [avatar, setAvatar] = useState<string>(
+    () => localStorage.getItem(AVATAR_KEY) || ''
+  );
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load user data from localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
+    let cancelled = false;
+
+    (async () => {
       try {
-        const user = JSON.parse(storedUser);
-        setUserData({ ...user, avatar: user.avatar || '' });
+        const data = await authService.getProfile();
+        if (!cancelled) setProfile(data);
       } catch (err) {
-        console.error('Error parsing user data:', err);
+        if (!cancelled) {
+          setError(
+            getFriendlyError(err, 'No pudimos cargar tu perfil. Inténtalo de nuevo.')
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleAvatarClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
+  const handleAvatarClick = () => fileInputRef.current?.click();
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('La imagen no puede exceder 5MB');
-        return;
-      }
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newUserData = { ...userData, avatar: reader.result as string };
-        setUserData(newUserData);
-        localStorage.setItem('user', JSON.stringify(newUserData));
-      };
-      reader.readAsDataURL(file);
+    if (file.size > 5 * 1024 * 1024) {
+      setError('La imagen no puede superar los 5MB.');
+      return;
     }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      setAvatar(result);
+      localStorage.setItem(AVATAR_KEY, result);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleRemoveAvatar = () => {
-    const newUserData = { ...userData, avatar: '' };
-    setUserData(newUserData);
-    localStorage.setItem('user', JSON.stringify(newUserData));
+    setAvatar('');
+    localStorage.removeItem(AVATAR_KEY);
   };
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name?: string) =>
+    (name || '')
       .split(' ')
       .map((n) => n[0])
       .join('')
+      .slice(0, 2)
       .toUpperCase();
-  };
+
+  // Filas de información del usuario (sin contraseña).
+  const infoRows = profile
+    ? [
+        {
+          icon: <PersonIcon />,
+          label: 'Nombre de usuario',
+          value: profile.username,
+        },
+        {
+          icon: <EmailIcon />,
+          label: 'Correo electrónico',
+          value: profile.email,
+        },
+        {
+          icon: <BadgeIcon />,
+          label: 'Rol',
+          value: roleLabel(profile.role),
+        },
+        {
+          icon: <RecoveryIcon />,
+          label: 'Correo de recuperación',
+          value: profile.recoveryEmail || 'No registrado',
+        },
+      ]
+    : [];
 
   return (
-    <Box sx={{ 
-      minHeight: 'calc(100vh - 64px)',
-      width: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      background: `
-        radial-gradient(circle at 20% 30%, rgba(107, 155, 209, 0.15) 0%, transparent 45%),
-        radial-gradient(circle at 80% 70%, rgba(158, 141, 173, 0.15) 0%, transparent 45%),
-        radial-gradient(circle at 10% 80%, rgba(168, 216, 234, 0.1) 0%, transparent 40%),
-        linear-gradient(135deg, #F8F9FA 0%, #E8D1E0 10%, #A8D8EA 100%)
-      `,
-      backgroundAttachment: 'fixed',
-      backgroundSize: '200% 200%, 200% 200%, 200% 200%, 100% 100%',
-      animation: 'vivoBgMove 6s ease infinite',
-      position: 'relative',
-      overflow: 'auto',
-      py: 4,
-      px: { xs: 2, sm: 4 },
-      '&::before': {
-        content: '""',
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+    <Box
+      sx={{
+        minHeight: 'calc(100vh - 64px)',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        py: 5,
+        px: { xs: 2, sm: 4 },
         background: `
-          radial-gradient(circle at 70% 20%, rgba(44, 74, 109, 0.08) 0%, transparent 50%),
-          radial-gradient(circle at 30% 60%, rgba(232, 209, 224, 0.1) 0%, transparent 50%)
+          radial-gradient(circle at 20% 30%, rgba(107, 155, 209, 0.15) 0%, transparent 45%),
+          radial-gradient(circle at 80% 70%, rgba(158, 141, 173, 0.15) 0%, transparent 45%),
+          radial-gradient(circle at 10% 80%, rgba(168, 216, 234, 0.1) 0%, transparent 40%),
+          linear-gradient(135deg, #F8F9FA 0%, #E8D1E0 10%, #A8D8EA 100%)
         `,
-        animation: 'vivoBgMove 8s ease-in-out infinite reverse',
-        backgroundSize: '200% 200%',
-        zIndex: 0,
-        pointerEvents: 'none',
-      },
-    }}>
-      <Box sx={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '600px' }}>
+        backgroundAttachment: 'fixed',
+        backgroundSize: '200% 200%, 200% 200%, 200% 200%, 100% 100%',
+        animation: 'vivoBgMove 6s ease infinite',
+        position: 'relative',
+        overflow: 'auto',
+      }}
+    >
+      <Box sx={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: 620 }}>
+        <Typography
+          variant="h4"
+          align="center"
+          sx={{ fontWeight: 800, letterSpacing: '-0.5px', mb: 1 }}
+          color="primary.main"
+        >
+          Mi perfil
+        </Typography>
+        <Typography
+          variant="body1"
+          align="center"
+          color="text.secondary"
+          sx={{ mb: 4 }}
+        >
+          Esta es la información de tu cuenta.
+        </Typography>
+
         <Card
           sx={{
-            background: 'rgba(255, 255, 255, 0.95)',
+            background: 'rgba(255, 255, 255, 0.96)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(107, 155, 209, 0.15)',
             boxShadow: '0 12px 40px rgba(44, 74, 109, 0.15)',
@@ -121,114 +182,222 @@ export default function UserProfile() {
             overflow: 'hidden',
           }}
         >
-          <CardContent sx={{ p: 4, textAlign: 'center' }}>
-            {/* Avatar */}
-            <Box sx={{ position: 'relative', mb: 3, display: 'inline-block' }}>
-              <Avatar
-                sx={{
-                  width: 140,
-                  height: 140,
-                  background: userData.avatar
-                    ? 'transparent'
-                    : `linear-gradient(135deg, #6B9BD1 0%, #9E8DAD 100%)`,
-                  fontSize: '3rem',
-                  fontWeight: 800,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  border: '4px solid white',
-                  boxShadow: '0 8px 24px rgba(44, 74, 109, 0.2)',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 12px 32px rgba(107, 155, 209, 0.3)',
-                  },
-                }}
-                src={userData.avatar || undefined}
-                onClick={handleAvatarClick}
-              >
-                {!userData.avatar && getInitials(userData.username)}
-              </Avatar>
+          <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+            {/* AVATAR */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                mb: 3,
+              }}
+            >
+              <Box sx={{ position: 'relative', width: 120, height: 120 }}>
+                <Avatar
+                  src={avatar || undefined}
+                  onClick={handleAvatarClick}
+                  sx={{
+                    width: 120,
+                    height: 120,
+                    fontSize: '2.6rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    background: avatar
+                      ? 'transparent'
+                      : 'linear-gradient(135deg, #6B9BD1 0%, #9E8DAD 100%)',
+                    border: '4px solid #FFFFFF',
+                    boxShadow: '0 8px 24px rgba(44, 74, 109, 0.2)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'scale(1.04)',
+                      boxShadow: '0 12px 32px rgba(107, 155, 209, 0.3)',
+                    },
+                  }}
+                >
+                  {!avatar && getInitials(profile?.username)}
+                </Avatar>
 
-              {/* Upload Button */}
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  bgcolor: 'secondary.main',
-                  borderRadius: '50%',
-                  p: 1,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  border: '3px solid white',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 4px 12px rgba(158, 141, 173, 0.4)',
-                  },
-                }}
-                onClick={handleAvatarClick}
-              >
-                <PhotoCameraIcon sx={{ color: 'white', fontSize: 20 }} />
+                {/* Botón de cambiar foto: círculo perfecto y simétrico */}
+                <Box
+                  onClick={handleAvatarClick}
+                  sx={{
+                    position: 'absolute',
+                    bottom: 2,
+                    right: 2,
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    bgcolor: 'secondary.main',
+                    border: '3px solid #FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      transform: 'scale(1.1)',
+                      boxShadow: '0 4px 12px rgba(158, 141, 173, 0.4)',
+                    },
+                  }}
+                >
+                  <PhotoCameraIcon sx={{ color: '#FFFFFF', fontSize: 18 }} />
+                </Box>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                  style={{ display: 'none' }}
+                />
               </Box>
 
-              {/* Hidden File Input */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarChange}
-                style={{ display: 'none' }}
-              />
-            </Box>
-
-            {/* User Info */}
-            <Typography
-              variant="h5"
-              sx={{
-                fontWeight: 700,
-                color: 'primary.dark',
-                mb: 0.5,
-              }}
-            >
-              {userData.username}
-            </Typography>
-
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.secondary',
-                fontSize: '0.95rem',
-              }}
-            >
-              {userData.email}
-            </Typography>
-
-            <Divider sx={{ my: 3 }} />
-
-            {/* Action Buttons */}
-            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {userData.avatar && (
+              {/* Botones de foto */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1.5,
+                  mt: 2.5,
+                  flexWrap: 'wrap',
+                  justifyContent: 'center',
+                }}
+              >
                 <Button
                   size="small"
-                  variant="outlined"
+                  variant="contained"
                   color="secondary"
-                  startIcon={<DeleteIcon />}
-                  onClick={handleRemoveAvatar}
+                  startIcon={<PhotoCameraIcon />}
+                  onClick={handleAvatarClick}
                   sx={{ borderRadius: 2 }}
                 >
-                  Eliminar foto
+                  Cambiar foto
                 </Button>
-              )}
-              <Button
-                size="small"
-                variant="contained"
-                color="secondary"
-                startIcon={<PhotoCameraIcon />}
-                onClick={handleAvatarClick}
-                sx={{ borderRadius: 2 }}
-              >
-                Cambiar foto
-              </Button>
+                {avatar && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="secondary"
+                    startIcon={<DeleteIcon />}
+                    onClick={handleRemoveAvatar}
+                    sx={{ borderRadius: 2 }}
+                  >
+                    Eliminar foto
+                  </Button>
+                )}
+              </Box>
             </Box>
+
+            <Divider sx={{ mb: 1 }} />
+
+            {/* CARGANDO / ERROR / INFO */}
+            {loading ? (
+              <Box sx={{ textAlign: 'center', py: 5 }}>
+                <CircularProgress size={40} />
+              </Box>
+            ) : error ? (
+              <Alert severity="error" sx={{ borderRadius: 2, my: 2 }}>
+                {error}
+              </Alert>
+            ) : (
+              <Box>
+                {infoRows.map((row) => (
+                  <Box
+                    key={row.label}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      py: 2,
+                      borderBottom: '1px solid rgba(107, 155, 209, 0.12)',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        flexShrink: 0,
+                        width: 40,
+                        height: 40,
+                        borderRadius: 2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'rgba(107, 155, 209, 0.12)',
+                        color: 'primary.main',
+                      }}
+                    >
+                      {row.icon}
+                    </Box>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ fontWeight: 600 }}
+                      >
+                        {row.label}
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {row.value}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ))}
+
+                {/* Verificación en dos pasos */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    py: 2,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 2,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      bgcolor: 'rgba(107, 155, 209, 0.12)',
+                      color: 'primary.main',
+                    }}
+                  >
+                    <VerifiedUserIcon />
+                  </Box>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontWeight: 600, display: 'block' }}
+                    >
+                      Verificación en dos pasos
+                    </Typography>
+                    <Chip
+                      size="small"
+                      label={
+                        profile?.twoFactorEnabled ? 'Activada' : 'Desactivada'
+                      }
+                      sx={{
+                        mt: 0.5,
+                        fontWeight: 700,
+                        color: '#FFFFFF',
+                        bgcolor: profile?.twoFactorEnabled
+                          ? '#27AE60'
+                          : '#9AA0A6',
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+            )}
           </CardContent>
         </Card>
       </Box>

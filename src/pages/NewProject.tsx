@@ -1112,28 +1112,12 @@ export default function NewProject() {
                     </Typography>
                   </Alert>
 
-                  {/* ── 3D Viewer ── */}
-                  <Box sx={{ mb: 4 }}>
+                  <Box sx={{ width: '100%', mb: 4 }}>
                     <ModelViewer
                       modelUrl={project.model3DUrl}
                       backgroundImageUrl={backgroundImageUrl}
                     />
                   </Box>
-
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    href={project.model3DUrl}
-                    target="_blank"
-                    size="large"
-                    sx={{
-                      px: 6,
-                      py: 2,
-                      fontSize: '1.2rem',
-                    }}
-                  >
-                    Descargar Modelo 3D (.glb)
-                  </Button>
 
                   <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
                     <Button
