@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type { ReactNode } from 'react';
 import { BoundedStack } from '../utils/BoundedStack';
+import { playNotificationSound } from '../utils/notificationSounds';
 
 export type NotificationType = 'success' | 'error' | 'info';
 
@@ -61,6 +62,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         read: false,
         type,
       };
+      // Reproducir sonido de notificación
+      playNotificationSound();
       // Apilamos en una NUEVA instancia para que React vuelva a renderizar.
       setStack((prev) =>
         BoundedStack.from([notif, ...prev.toArray()], CAPACITY)
