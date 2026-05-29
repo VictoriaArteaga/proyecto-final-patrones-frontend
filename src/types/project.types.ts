@@ -4,6 +4,29 @@ export type DesignCategory =
   | 'INTERIOR_ROOM'
   | 'FURNITURE_ITEM';
 
+// Parámetros estructurados que se envían al regenerar un diseño rechazado.
+// Todos opcionales; cada categoría usa un subconjunto distinto.
+export interface ProjectParametersInput {
+  lotWidth?: number;
+  lotLength?: number;
+  totalArea?: number;
+  constructionType?: string;
+  color?: string;
+  numberOfFloors?: number;
+  numberOfRooms?: number;
+  numberOfBathrooms?: number;
+  additionalElements?: string[];
+  detailDescription?: string;
+  roomType?: string;
+  furnitureType?: string;
+  furnitureWidthCm?: number;
+  furnitureHeightCm?: number;
+  furnitureDepthCm?: number;
+  materials?: string;
+  styleTrend?: string;
+  placement?: string;
+}
+
 export interface ProjectResponseDTO {
   id: string;
   name: string;
