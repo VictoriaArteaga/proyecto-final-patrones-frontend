@@ -24,15 +24,48 @@ import {
   Check as CheckIcon,
   Close as CloseIcon,
   AutoAwesome as AutoAwesomeIcon,
+  Apartment as ApartmentIcon,
+  Weekend as WeekendIcon,
+  Chair as ChairIcon,
 } from '@mui/icons-material';
 
 import { projectService } from '../services/project.service';
-import type { ProjectResponseDTO } from '../types/project.types';
+import type {
+  DesignCategory,
+  ProjectResponseDTO,
+} from '../types/project.types';
 
 const steps = [
   'Subir Fotografía',
   'Revisar Render 2D',
   'Generar Modelo 3D',
+];
+
+// Categorías de diseño disponibles en el backend (enum DesignCategory).
+const categories: {
+  value: DesignCategory;
+  title: string;
+  description: string;
+  icon: typeof ApartmentIcon;
+}[] = [
+  {
+    value: 'EXTERIOR_ARCHITECTURE',
+    title: 'Arquitectura Exterior',
+    description: 'Casas, edificios o estructuras sobre un terreno.',
+    icon: ApartmentIcon,
+  },
+  {
+    value: 'INTERIOR_ROOM',
+    title: 'Espacio Interior',
+    description: 'Rediseño de una sala, cuarto o cocina completa.',
+    icon: WeekendIcon,
+  },
+  {
+    value: 'FURNITURE_ITEM',
+    title: 'Mueble u Objeto',
+    description: 'Inserción de un mueble u objeto puntual en una foto.',
+    icon: ChairIcon,
+  },
 ];
 
 const CustomConnector = styled(StepConnector)(({ theme }) => ({
@@ -71,6 +104,9 @@ export default function NewProject() {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
 
+  const [category, setCategory] =
+    useState<DesignCategory | null>(null);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [project, setProject] =
@@ -98,9 +134,9 @@ export default function NewProject() {
   // CREATE + GENERATE 2D
   // =========================
   const handleCreateAndGenerate2D = async () => {
-    if (!projectName || !selectedFile) {
+    if (!projectName || !category || !selectedFile) {
       setError(
-        'Por favor ingresa un nombre y selecciona una imagen.'
+        'Por favor ingresa un nombre, elige una categoría y selecciona una imagen.'
       );
       return;
     }
@@ -115,7 +151,8 @@ export default function NewProject() {
       // PASO 1: CREAR PROYECTO
       const createdProject = await projectService.createProject(
         selectedFile,
-        projectName
+        projectName,
+        category
       );
 
       console.log('Proyecto creado:', createdProject);
@@ -202,6 +239,8 @@ export default function NewProject() {
       setDescription('');
 
       setProjectName('');
+
+      setCategory(null);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -395,6 +434,110 @@ export default function NewProject() {
                 textAlign: 'center',
               }}
             >
+              {/* CATEGORY SELECTOR */}
+              <Typography
+                variant="h6"
+                align="left"
+                sx={{ mb: 0.5, fontWeight: 700 }}
+              >
+                ¿Qué deseas generar?
+              </Typography>
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                align="left"
+                sx={{ mb: 2.5 }}
+              >
+                Elige la categoría de diseño para tu proyecto.
+              </Typography>
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(3, 1fr)',
+                  },
+                  gap: 2,
+                  mb: 4,
+                }}
+              >
+                {categories.map((cat) => {
+                  const Icon = cat.icon;
+                  const selected = category === cat.value;
+
+                  return (
+                    <Box
+                      key={cat.value}
+                      onClick={() =>
+                        !loading && setCategory(cat.value)
+                      }
+                      sx={{
+                        textAlign: 'center',
+                        p: 2.5,
+                        height: '100%',
+                        borderRadius: 4,
+                        cursor: loading ? 'default' : 'pointer',
+                        transition: 'all 0.3s',
+
+                        border: '2px solid',
+                        borderColor: selected
+                          ? 'primary.main'
+                          : 'rgba(107, 155, 209, 0.2)',
+
+                        bgcolor: selected
+                          ? 'rgba(107, 155, 209, 0.08)'
+                          : 'transparent',
+
+                        boxShadow: selected
+                          ? '0 6px 18px rgba(44, 74, 109, 0.12)'
+                          : 'none',
+
+                        '&:hover': {
+                          borderColor: loading
+                            ? ''
+                            : 'primary.main',
+                          transform: loading
+                            ? 'none'
+                            : 'translateY(-3px)',
+                        },
+                      }}
+                    >
+                      <Icon
+                        sx={{
+                          fontSize: 42,
+                          mb: 1,
+                          color: selected
+                            ? 'primary.main'
+                            : 'text.secondary',
+                        }}
+                      />
+
+                      <Typography
+                        variant="subtitle1"
+                        sx={{
+                          fontWeight: 700,
+                          color: selected
+                            ? 'primary.dark'
+                            : 'text.primary',
+                        }}
+                      >
+                        {cat.title}
+                      </Typography>
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mt: 0.5 }}
+                      >
+                        {cat.description}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Box>
+
               {/* PROJECT NAME */}
               <TextField
                 fullWidth
@@ -513,7 +656,8 @@ export default function NewProject() {
                 disabled={
                   loading ||
                   !selectedFile ||
-                  !projectName
+                  !projectName ||
+                  !category
                 }
                 sx={{
                   py: 1.5,

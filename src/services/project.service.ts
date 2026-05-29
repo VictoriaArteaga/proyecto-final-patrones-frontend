@@ -1,18 +1,23 @@
 import api from './api';
-import type { ProjectResponseDTO } from '../types/project.types';
+import type {
+  DesignCategory,
+  ProjectResponseDTO,
+} from '../types/project.types';
 
 export const projectService = {
 
   // 1. Crear proyecto subiendo la imagen inicial
   createProject: async (
     file: File,
-    name: string
+    name: string,
+    category: DesignCategory
   ): Promise<ProjectResponseDTO> => {
 
     const formData = new FormData();
 
     formData.append('file', file);
     formData.append('name', name);
+    formData.append('category', category);
 
     const response = await api.post<ProjectResponseDTO>(
       '/projects',
