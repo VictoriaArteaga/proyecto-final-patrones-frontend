@@ -1,5 +1,5 @@
 import api from './api';
-import type { LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO } from '../types/auth.types';
+import type { LoginRequestDTO, RegisterRequestDTO, AuthResponseDTO, UserProfileDTO } from '../types/auth.types';
 
 export const authService = {
   
@@ -19,6 +19,12 @@ export const authService = {
   // Función para verificar cuenta
   verify: async (token: string) => {
     const response = await api.get(`/auth/verify?token=${token}`);
+    return response.data;
+  },
+
+  // Datos del usuario autenticado (para "Mi perfil")
+  getProfile: async (): Promise<UserProfileDTO> => {
+    const response = await api.get<UserProfileDTO>('/users/me');
     return response.data;
   }
 };
