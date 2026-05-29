@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, PersonAdd as PersonAddIcon, Person as PersonIcon, Lock as LockIcon, Mail as MailIcon } from '@mui/icons-material';
 import { authService } from '../services/auth.service';
+import { getFriendlyError } from '../utils/errorMessages';
 import type { RegisterRequestDTO } from '../types/auth.types';
 
 export default function Register() {
@@ -70,26 +71,13 @@ export default function Register() {
       
     } catch (err: any) {
       console.error("Error completo:", err);
-      
-      if (!err.response) {
-        setError("Error de red. Asegúrate de que el servidor esté en ejecución.");
-        return;
-      }
 
-      const status = err.response.status;
-      const data = err.response.data;
-      
-      if (data) {
-        if (data.errors && Array.isArray(data.errors)) {
-          const validationMessages = data.errors.map((e: any) => e.defaultMessage || e.msg).join(' - ');
-          setError(`Error de validación: ${validationMessages}`);
-          return;
-        }
-        const backendError = data.message || data.error || JSON.stringify(data);
-        setError(`Error ${status}: ${backendError}`);
-      } else {
-        setError(`Error ${status} del servidor.`);
-      }
+      setError(
+        getFriendlyError(
+          err,
+          'No pudimos crear tu cuenta. Verifica tus datos e inténtalo de nuevo.'
+        )
+      );
     } finally {
       setLoading(false);
     }
