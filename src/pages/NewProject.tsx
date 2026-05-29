@@ -1068,9 +1068,21 @@ export default function NewProject() {
                   <Typography
                     variant="h6"
                     color="primary"
+                    sx={{ mb: 3 }}
                   >
                     Procesando modelo 3D...
                   </Typography>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      localStorage.removeItem(ACTIVE_PROJECT_KEY);
+                      resetFlow();
+                    }}
+                  >
+                    Cancelar y crear nuevo proyecto
+                  </Button>
                 </Box>
               )}
 
