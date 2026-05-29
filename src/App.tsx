@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard';
 import NewProject from './pages/NewProject';
 import DataStructures from './pages/DataStructures';
 import VerifyAccount from './pages/VerifyAccount';
+import UserProfile from './pages/UserProfile';
 import Layout from './components/Layout';
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/new-project" element={<NewProject />} />
             <Route path="/data-structures" element={<DataStructures />} />
+            <Route path="/profile" element={<UserProfile />} />
           </Route>
         </Routes>
       </BrowserRouter>

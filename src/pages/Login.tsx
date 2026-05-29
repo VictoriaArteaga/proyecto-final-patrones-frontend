@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, Login as LoginIcon, Mail as MailIcon, Lock as LockIcon } from '@mui/icons-material';
 import { authService } from '../services/auth.service';
+import { getFriendlyError } from '../utils/errorMessages';
 import type { LoginRequestDTO } from '../types/auth.types';
 
 export default function Login() {
@@ -28,11 +29,16 @@ export default function Login() {
       const response = await authService.login(credentials);
       
       localStorage.setItem('token', response.token);
-      navigate('/dashboard');
+      // Guardar datos del usuario si vienen en la respuesta
+      if ((response as any).user) {
+        localStorage.setItem('user', JSON.stringify((response as any).user));
+      }
+      navigate('/new-project');
       
     } catch (err: any) {
-      const message = err.response?.data?.message || 'Credenciales incorrectas o el servidor no responde.';
-      setError(message);
+      setError(
+        getFriendlyError(err, 'Correo o contraseña incorrectos. Verifícalos e inténtalo de nuevo.')
+      );
     } finally {
       setLoading(false);
     }

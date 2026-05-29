@@ -30,6 +30,8 @@ import {
 } from '@mui/icons-material';
 
 import { projectService } from '../services/project.service';
+import { getFriendlyError } from '../utils/errorMessages';
+import { ACTIVE_PROJECT_KEY } from '../utils/storageKeys';
 import type {
   DesignCategory,
   ProjectResponseDTO,
@@ -83,9 +85,6 @@ const categories: {
       'Ej: Estantería de madera clara de 3 niveles, estilo minimalista.',
   },
 ];
-
-// Clave en localStorage para recordar el proyecto en curso entre navegaciones/recargas.
-const ACTIVE_PROJECT_KEY = 'newProject:activeProjectId';
 
 // Estados del backend en los que la IA está trabajando (hay que hacer polling).
 const GENERATING_STATES = [
@@ -179,7 +178,7 @@ export default function NewProject() {
   }, [selectedFile, project?.imageOriginalUrl]);
 
   // =========================
-  // REANUDAR PROYECTO EN CURSO (al montar)
+  // REANUDAR PROYECTO EN CURSO 
   // =========================
   // Si dejamos un proyecto a medias (en otra pestaña/recarga), lo recuperamos
   // del backend, que es la fuente de verdad: persiste status, image2DUrl y model3DUrl.
@@ -238,17 +237,19 @@ export default function NewProject() {
         if (updated.model3DUrl) {
           setActiveStep(2);
           setLoading(false);
-          setSuccess('¡Modelo 3D generado con éxito!');
+          setSuccess('¡Tu modelo 3D ya está listo!');
         } else if (updated.status === 'WAITING_2D_APPROVAL') {
           setActiveStep(1);
           setLoading(false);
-          setSuccess('Render 2D generado correctamente.');
+          setSuccess('¡Tu diseño 2D ya está listo! Revísalo abajo.');
         } else if (
           updated.status === 'FAILED' ||
           updated.status === 'ERROR'
         ) {
           setLoading(false);
-          setError('Error durante la generación.');
+          setError(
+            'No pudimos completar la generación. Por favor, inténtalo de nuevo.'
+          );
         }
       } catch (err) {
         console.error('Error consultando el estado del proyecto', err);
@@ -332,16 +333,17 @@ export default function NewProject() {
 
       setProject(projectWith2D);
 
-      setSuccess('Render 2D generado correctamente.');
+      setSuccess('¡Tu diseño 2D ya está listo! Revísalo abajo.');
 
       setActiveStep(1);
     } catch (err: any) {
       console.error(err);
 
       setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          'Error al procesar la imagen.'
+        getFriendlyError(
+          err,
+          'No pudimos procesar tu imagen. Revisa que sea JPG o PNG e inténtalo de nuevo.'
+        )
       );
     } finally {
       setLoading(false);
@@ -366,8 +368,7 @@ export default function NewProject() {
       setActiveStep(2);
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          'Error al aprobar el diseño.'
+        getFriendlyError(err, 'No pudimos aprobar el diseño. Inténtalo de nuevo.')
       );
     } finally {
       setLoading(false);
@@ -390,12 +391,11 @@ export default function NewProject() {
       resetFlow();
 
       setError(
-        'El diseño fue rechazado. Intenta subir otra imagen.'
+        'Descartaste el diseño. Sube otra imagen para intentarlo de nuevo.'
       );
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          'Error al rechazar el diseño.'
+        getFriendlyError(err, 'No pudimos descartar el diseño. Inténtalo de nuevo.')
       );
       setLoading(false);
     }
@@ -419,12 +419,14 @@ export default function NewProject() {
       setProject(updated);
 
       setSuccess(
-        '¡Generación 3D iniciada! El proceso continúa aunque cambies de ventana.'
+        'Estamos creando tu modelo 3D. Esto puede tardar un poco; puedes seguir usando la app y aquí verás el resultado al terminar.'
       );
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          'Error al iniciar la generación 3D.'
+        getFriendlyError(
+          err,
+          'No pudimos iniciar la creación del modelo 3D. Inténtalo de nuevo.'
+        )
       );
 
       setLoading(false);
@@ -435,12 +437,49 @@ export default function NewProject() {
     categories.find((c) => c.value === category) ?? null;
 
   return (
-    <Container maxWidth="md">
+    <Box sx={{ 
+      minHeight: 'calc(100vh - 64px)',
+      width: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      background: `
+        radial-gradient(circle at 20% 30%, rgba(107, 155, 209, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 80% 70%, rgba(158, 141, 173, 0.15) 0%, transparent 45%),
+        radial-gradient(circle at 10% 80%, rgba(168, 216, 234, 0.1) 0%, transparent 40%),
+        linear-gradient(135deg, #F8F9FA 0%, #E8D1E0 10%, #A8D8EA 100%)
+      `,
+      backgroundAttachment: 'fixed',
+      backgroundSize: '200% 200%, 200% 200%, 200% 200%, 100% 100%',
+      animation: 'vivoBgMove 6s ease infinite',
+      position: 'relative',
+      overflow: 'auto',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: `
+          radial-gradient(circle at 70% 20%, rgba(44, 74, 109, 0.08) 0%, transparent 50%),
+          radial-gradient(circle at 30% 60%, rgba(232, 209, 224, 0.1) 0%, transparent 50%)
+        `,
+        animation: 'vivoBgMove 8s ease-in-out infinite reverse',
+        backgroundSize: '200% 200%',
+        zIndex: 0,
+        pointerEvents: 'none',
+      }
+    }}>
+      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', py: 4 }}>
       <Card
         sx={{
           mt: 4,
           overflow: 'visible',
           animation: 'fadeIn 0.8s ease-out forwards',
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
         }}
       >
         <CardContent sx={{ p: { xs: 3, sm: 5 } }}>
@@ -469,7 +508,7 @@ export default function NewProject() {
                 letterSpacing: '-0.5px',
               }}
             >
-              Generador de Casa 3D
+              Generador 3D
             </Typography>
 
             <AutoAwesomeIcon
@@ -1040,9 +1079,21 @@ export default function NewProject() {
                   <Typography
                     variant="h6"
                     color="primary"
+                    sx={{ mb: 3 }}
                   >
                     Procesando modelo 3D...
                   </Typography>
+
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      localStorage.removeItem(ACTIVE_PROJECT_KEY);
+                      resetFlow();
+                    }}
+                  >
+                    Cancelar y crear nuevo proyecto
+                  </Button>
                 </Box>
               )}
 
@@ -1084,11 +1135,22 @@ export default function NewProject() {
                     Descargar Modelo 3D (.glb)
                   </Button>
 
-                  <Box sx={{ mt: 3 }}>
+                  <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      href={project.model3DUrl}
+                      target="_blank"
+                      size="large"
+                      sx={{ px: 4, py: 1.25 }}
+                    >
+                      Descargar Modelo (.glb)
+                    </Button>
                     <Button
                       variant="outlined"
                       color="primary"
                       onClick={resetFlow}
+                      size="large"
                       sx={{ px: 4, py: 1.25 }}
                     >
                       Crear nuevo proyecto
@@ -1100,6 +1162,7 @@ export default function NewProject() {
           )}
         </CardContent>
       </Card>
-    </Container>
+      </Container>
+    </Box>
   );
 }
