@@ -26,5 +26,17 @@ export const authService = {
   getProfile: async (): Promise<UserProfileDTO> => {
     const response = await api.get<UserProfileDTO>('/users/me');
     return response.data;
-  }
+  },
+
+  // Guarda/actualiza la foto de perfil en el backend (ligada a la cuenta).
+  // `avatar` es un data-URL base64 (data:image/...;base64,....).
+  updateAvatar: async (avatar: string): Promise<UserProfileDTO> => {
+    const response = await api.put<UserProfileDTO>('/users/me/avatar', { avatar });
+    return response.data;
+  },
+
+  // Elimina la foto de perfil del backend.
+  deleteAvatar: async (): Promise<void> => {
+    await api.delete('/users/me/avatar');
+  },
 };

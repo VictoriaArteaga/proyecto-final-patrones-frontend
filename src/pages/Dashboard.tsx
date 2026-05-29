@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Typography,
@@ -23,6 +23,7 @@ import {
   InputAdornment,
   Collapse,
   Divider,
+  Pagination,
 } from '@mui/material';
 import {
   AddBox as AddBoxIcon,
@@ -45,7 +46,11 @@ import {
 } from '../utils/projectMeta';
 import { ACTIVE_PROJECT_KEY } from '../utils/storageKeys';
 import { DoublyLinkedList } from '../utils/DoublyLinkedList';
+import { Trie } from '../utils/Trie';
 import type { ProjectResponseDTO, DesignCategory } from '../types/project.types';
+
+// Máximo de proyectos visibles por página.
+const PROJECTS_PER_PAGE = 20;
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -73,6 +78,9 @@ export default function Dashboard() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  // Página actual de la paginación (1-indexada).
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,10 +172,31 @@ export default function Dashboard() {
     new Set(allProjects.map((p) => p.status))
   );
 
+  // ===== TRIE PARA BÚSQUEDA POR NOMBRE =====
+  // Indexamos todos los sufijos de cada nombre → id (trie de sufijos), de modo
+  // que la consulta por prefijo encuentra también coincidencias por SUBCADENA.
+  // Se reconstruye solo cuando cambia la lista; consultar es O(k).
+  const nameTrie = useMemo(() => {
+    const trie = new Trie();
+    for (const p of projectList) {
+      trie.insertAllSubstrings(p.name, p.id);
+    }
+    return trie;
+    // projectList es la fuente de verdad; allProjects deriva de ella.
+  }, [projectList]);
+
+  // Ids cuyo nombre contiene lo escrito. null = sin texto → no filtra por nombre.
+  const nameMatchIds = useMemo(() => {
+    const q = searchText.trim();
+    if (!q) return null;
+    return new Set(nameTrie.getIdsWithPrefix(q));
+  }, [searchText, nameTrie]);
+
   // Predicado que combina las tres capas de filtrado.
   const matchesFilters = (p: ProjectResponseDTO): boolean => {
-    const q = searchText.trim().toLowerCase();
-    if (q && !p.name.toLowerCase().includes(q)) return false;
+    // Búsqueda por nombre vía Trie de sufijos (subcadena, O(k)): si hay texto,
+    // el proyecto debe estar en el conjunto de ids que contienen lo escrito.
+    if (nameMatchIds && !nameMatchIds.has(p.id)) return false;
 
     if (selectedStatuses.size > 0 && !selectedStatuses.has(p.status))
       return false;
@@ -189,6 +218,20 @@ export default function Dashboard() {
 
   // Filtramos recorriendo la lista doble y pasamos a arreglo para renderizar.
   const filtered = projectList.filter(matchesFilters).toArray();
+
+  // Cada vez que cambian los filtros, volvemos a la primera página.
+  useEffect(() => {
+    setPage(1);
+  }, [searchText, selectedStatuses, selectedTypes, dateFrom, dateTo]);
+
+  // Paginación: como máximo PROJECTS_PER_PAGE por página.
+  const pageCount = Math.ceil(filtered.length / PROJECTS_PER_PAGE);
+  // Si el filtrado reduce las páginas por debajo de la actual, la corregimos.
+  const safePage = Math.min(page, Math.max(pageCount, 1));
+  const paginated = filtered.slice(
+    (safePage - 1) * PROJECTS_PER_PAGE,
+    safePage * PROJECTS_PER_PAGE
+  );
 
   // Map: filtros activos (dimensión → etiqueta + cómo quitarlo).
   const activeFilters = new Map<
@@ -537,6 +580,11 @@ export default function Dashboard() {
               {filtered.length}{' '}
               {filtered.length === 1 ? 'proyecto' : 'proyectos'}
               {hasActiveFilters ? ' (filtrados)' : ''}
+              {pageCount > 1 &&
+                ` · mostrando ${(safePage - 1) * PROJECTS_PER_PAGE + 1}–${Math.min(
+                  safePage * PROJECTS_PER_PAGE,
+                  filtered.length
+                )}`}
             </Typography>
 
             {/* SIN RESULTADOS PARA LOS FILTROS */}
@@ -571,6 +619,7 @@ export default function Dashboard() {
               </Card>
             ) : (
               /* GRID DE PROYECTOS */
+              <>
               <Box
                 sx={{
                   display: 'grid',
@@ -583,7 +632,7 @@ export default function Dashboard() {
                   pb: 6,
                 }}
               >
-                {filtered.map((project) => {
+                {paginated.map((project) => {
                   const cat = getCategoryMeta(project.category);
                   const statusMeta = getStatusMeta(project.status);
                   const CatIcon = cat.icon;
@@ -722,6 +771,28 @@ export default function Dashboard() {
                   );
                 })}
               </Box>
+
+              {/* CONTROLES DE PAGINACIÓN (solo si hay más de una página) */}
+              {pageCount > 1 && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    pb: 6,
+                  }}
+                >
+                  <Pagination
+                    count={pageCount}
+                    page={safePage}
+                    onChange={(_, value) => setPage(value)}
+                    color="primary"
+                    shape="rounded"
+                    showFirstButton
+                    showLastButton
+                  />
+                </Box>
+              )}
+              </>
             )}
           </>
         )}

@@ -13,6 +13,7 @@ import UserProfile from './pages/UserProfile';
 import Notifications from './pages/Notifications';
 import Layout from './components/Layout';
 import { NotificationsProvider } from './context/NotificationsContext';
+import { GenerationQueueProvider } from './context/GenerationQueueContext';
 
 function App() {
   return (
@@ -31,7 +32,9 @@ function App() {
           <Route
             element={
               <NotificationsProvider>
-                <Layout />
+                <GenerationQueueProvider>
+                  <Layout />
+                </GenerationQueueProvider>
               </NotificationsProvider>
             }
           >

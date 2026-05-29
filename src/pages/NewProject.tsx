@@ -33,6 +33,7 @@ import { projectService } from '../services/project.service';
 import { getFriendlyError } from '../utils/errorMessages';
 import { ACTIVE_PROJECT_KEY } from '../utils/storageKeys';
 import { useNotifications } from '../context/NotificationsContext';
+import { useGenerationQueue } from '../context/GenerationQueueContext';
 import type {
   DesignCategory,
   ProjectResponseDTO,
@@ -234,7 +235,12 @@ export default function NewProject() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { addNotification } = useNotifications();
+  // El backend genera las notificaciones al cambiar el estado del proyecto;
+  // aquí solo refrescamos el listado para verlas al instante en la campana.
+  const { refresh: refreshNotifications } = useNotifications();
+
+  // Cola FIFO de generaciones 3D: serializa las solicitudes (una a una).
+  const { enqueue, current: currentJob, positionOf } = useGenerationQueue();
 
   // Marca que el usuario detuvo la generación 3D (para mostrar "Reanudar").
   const [cancelled3D, setCancelled3D] = useState(false);
@@ -333,14 +339,12 @@ export default function NewProject() {
           setActiveStep(2);
           setLoading(false);
           setSuccess('¡Tu modelo 3D ya está listo!');
-          addNotification(
-            `Tu modelo 3D de "${updated.name}" está listo`,
-            'success'
-          );
+          refreshNotifications();
         } else if (updated.status === 'WAITING_2D_APPROVAL') {
           setActiveStep(1);
           setLoading(false);
           setSuccess('¡Tu diseño 2D ya está listo! Revísalo abajo.');
+          refreshNotifications();
         } else if (
           updated.status === 'FAILED' ||
           updated.status === 'ERROR'
@@ -349,10 +353,7 @@ export default function NewProject() {
           setError(
             'No pudimos completar la generación. Por favor, inténtalo de nuevo.'
           );
-          addNotification(
-            `La generación de "${updated.name}" falló`,
-            'error'
-          );
+          refreshNotifications();
         }
       } catch (err) {
         consecutiveFailures++;
@@ -375,6 +376,25 @@ export default function NewProject() {
     // Solo reiniciamos el intervalo cuando cambia el proyecto, su estado
     // o aparece el modelo 3D.
   }, [project?.id, project?.status, project?.model3DUrl]);
+
+  // =========================
+  // LA COLA EMPIEZA ESTE PROYECTO
+  // =========================
+  // Cuando la cola FIFO toma este proyecto para generar su 3D, reflejamos el
+  // estado "generando" localmente para que arranque el visor de progreso y el
+  // polling (la cola ya disparó generate3D en el backend).
+  useEffect(() => {
+    if (
+      project &&
+      currentJob?.projectId === project.id &&
+      project.status !== 'GENERATING_3D_MODEL' &&
+      !project.model3DUrl
+    ) {
+      setProject((prev) =>
+        prev ? { ...prev, status: 'GENERATING_3D_MODEL' } : prev
+      );
+    }
+  }, [currentJob, project?.id, project?.status, project?.model3DUrl]);
 
   // =========================
   // REINICIAR FLUJO (nuevo proyecto)
@@ -453,6 +473,7 @@ export default function NewProject() {
       setSuccess('¡Tu diseño 2D ya está listo! Revísalo abajo.');
 
       setActiveStep(1);
+      refreshNotifications();
     } catch (err: any) {
       console.error(err);
 
@@ -483,6 +504,7 @@ export default function NewProject() {
       setProject(approvedProject);
 
       setActiveStep(2);
+      refreshNotifications();
     } catch (err: any) {
       setError(
         getFriendlyError(err, 'No pudimos aprobar el diseño. Inténtalo de nuevo.')
@@ -509,6 +531,7 @@ export default function NewProject() {
       setProject(rejected); // status REJECTED_2D
       setParams({});
       setActiveStep(1);
+      refreshNotifications();
       setSuccess(
         'Cuéntanos más detalles y ajusta los parámetros para mejorar el diseño.'
       );
@@ -557,6 +580,7 @@ export default function NewProject() {
 
       setProject(updated); // WAITING_2D_APPROVAL con el nuevo render
       setActiveStep(1);
+      refreshNotifications();
       setSuccess('¡Generamos un nuevo diseño con tus indicaciones! Revísalo.');
     } catch (err: any) {
       setError(
@@ -568,36 +592,22 @@ export default function NewProject() {
   };
 
   // =========================
-  // GENERATE 3D
+  // GENERATE 3D (a través de la cola FIFO)
   // =========================
-  const handleGenerate3D = async () => {
+  // No llamamos a generate3D directamente: encolamos la solicitud. La cola la
+  // procesa en orden (una a una). Si hay otra generación en curso, esta queda
+  // en espera y arranca automáticamente al terminar la anterior.
+  const handleGenerate3D = () => {
     if (!project) return;
 
     setError('');
-    setSuccess('');
     setCancelled3D(false);
-    setLoading(true);
 
-    try {
-      const updated = await projectService.generate3D(project.id);
+    enqueue({ projectId: project.id, projectName: project.name });
 
-      // Al pasar a GENERATING_3D_MODEL, el effect de polling arranca solo
-      // y sigue aunque cambies de ventana (el estado vive en el backend).
-      setProject(updated);
-
-      setSuccess(
-        'Estamos creando tu modelo 3D. Esto puede tardar un poco; puedes seguir usando la app y aquí verás el resultado al terminar.'
-      );
-    } catch (err: any) {
-      setError(
-        getFriendlyError(
-          err,
-          'No pudimos iniciar la creación del modelo 3D. Inténtalo de nuevo.'
-        )
-      );
-
-      setLoading(false);
-    }
+    setSuccess(
+      'Tu generación 3D se agregó a la cola. Puedes seguir usando la app; aquí verás el resultado al terminar.'
+    );
   };
 
   // =========================
@@ -614,6 +624,7 @@ export default function NewProject() {
       setProject(updated);
       setLoading(false);
       setCancelled3D(true);
+      refreshNotifications();
       setSuccess('Generación detenida. Puedes reanudarla cuando quieras.');
     } catch (err: any) {
       setError(
@@ -629,6 +640,11 @@ export default function NewProject() {
   const usedParamRows = project
     ? buildUsedParamRows(project.category, project.parameters)
     : [];
+
+  // Posición de este proyecto en la cola de generación 3D:
+  // 0 = generando ahora · >=1 = en espera (N por delante) · -1 = no está en la cola.
+  const queuePosition = project ? positionOf(project.id) : -1;
+  const isWaitingInQueue = queuePosition >= 1;
 
   return (
     <Box sx={{ 
@@ -1528,7 +1544,8 @@ export default function NewProject() {
                 modelo 3D detallado.
               </Typography>
 
-              {!loading && (
+              {/* BOTÓN: ni en cola ni generando */}
+              {!isWaitingInQueue && !loading && queuePosition !== 0 && (
                 <Button
                   variant="contained"
                   color="secondary"
@@ -1545,7 +1562,27 @@ export default function NewProject() {
                 </Button>
               )}
 
-              {loading && (
+              {/* EN ESPERA EN LA COLA (hay otras generaciones por delante) */}
+              {isWaitingInQueue && (
+                <Box sx={{ mt: 2 }}>
+                  <CircularProgress
+                    size={56}
+                    thickness={4}
+                    sx={{ mb: 3, color: 'secondary.main' }}
+                  />
+                  <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                    En cola para generar el modelo 3D
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Hay {queuePosition} generación
+                    {queuePosition === 1 ? '' : 'es'} por delante. Comenzará
+                    automáticamente cuando sea su turno.
+                  </Typography>
+                </Box>
+              )}
+
+              {/* GENERANDO AHORA (es el turno de este proyecto) */}
+              {!isWaitingInQueue && (loading || queuePosition === 0) && (
                 <Box sx={{ mt: 2 }}>
                   <CircularProgress
                     size={80}
@@ -1554,7 +1591,7 @@ export default function NewProject() {
                   />
 
                   <Typography variant="h6" color="primary" sx={{ mb: 3 }}>
-                    Procesando modelo 3D...
+                    Generando modelo 3D...
                   </Typography>
 
                   <Button
