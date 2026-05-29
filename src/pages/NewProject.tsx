@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -47,26 +47,73 @@ const categories: {
   title: string;
   description: string;
   icon: typeof ApartmentIcon;
+  color: string;
+  promptLabel: string;
+  promptPlaceholder: string;
 }[] = [
   {
     value: 'EXTERIOR_ARCHITECTURE',
     title: 'Arquitectura Exterior',
-    description: 'Casas, edificios o estructuras sobre un terreno.',
+    description: 'Casas y edificios',
     icon: ApartmentIcon,
+    color: '#6B9BD1', // lightBlue
+    promptLabel: 'Describe la casa o edificio que deseas generar',
+    promptPlaceholder:
+      'Ej: Casa moderna de 4 pisos con piscina, grandes ventanales y jardín.',
   },
   {
     value: 'INTERIOR_ROOM',
     title: 'Espacio Interior',
-    description: 'Rediseño de una sala, cuarto o cocina completa.',
+    description: 'Salas, cuartos, cocinas',
     icon: WeekendIcon,
+    color: '#9E8DAD', // softPurple
+    promptLabel: 'Describe el espacio interior que deseas generar',
+    promptPlaceholder:
+      'Ej: Sala estilo escandinavo, tonos claros, sofá gris y plantas.',
   },
   {
     value: 'FURNITURE_ITEM',
     title: 'Mueble u Objeto',
-    description: 'Inserción de un mueble u objeto puntual en una foto.',
+    description: 'Muebles y objetos',
     icon: ChairIcon,
+    color: '#2C4A6D', // darkBlue
+    promptLabel: 'Describe el mueble u objeto que deseas generar',
+    promptPlaceholder:
+      'Ej: Estantería de madera clara de 3 niveles, estilo minimalista.',
   },
 ];
+
+// Clave en localStorage para recordar el proyecto en curso entre navegaciones/recargas.
+const ACTIVE_PROJECT_KEY = 'newProject:activeProjectId';
+
+// Estados del backend en los que la IA está trabajando (hay que hacer polling).
+const GENERATING_STATES = [
+  'GENERATING_2D',
+  'GENERATING_2D_WITH_PARAMS',
+  'GENERATING_3D_MODEL',
+];
+
+const isGenerating = (status?: string | null): boolean =>
+  !!status && GENERATING_STATES.includes(status);
+
+// Mapea el estado persistido del backend al paso visible del Stepper.
+const stepForStatus = (status?: string | null): number => {
+  switch (status) {
+    case 'IMAGE_UPLOADED':
+    case 'GENERATING_2D':
+      return 0;
+    case 'WAITING_2D_APPROVAL':
+    case 'REJECTED_2D':
+    case 'GENERATING_2D_WITH_PARAMS':
+      return 1;
+    case 'WAITING_FINAL_APPROVAL':
+    case 'GENERATING_3D_MODEL':
+    case 'COMPLETED':
+      return 2;
+    default:
+      return 0;
+  }
+};
 
 const CustomConnector = styled(StepConnector)(({ theme }) => ({
   [`&.${stepConnectorClasses.alternativeLabel}`]: {
@@ -120,6 +167,104 @@ export default function NewProject() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // =========================
+  // REANUDAR PROYECTO EN CURSO (al montar)
+  // =========================
+  // Si dejamos un proyecto a medias (en otra pestaña/recarga), lo recuperamos
+  // del backend, que es la fuente de verdad: persiste status, image2DUrl y model3DUrl.
+  useEffect(() => {
+    const savedId = localStorage.getItem(ACTIVE_PROJECT_KEY);
+    if (!savedId) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const saved = await projectService.getProject(savedId);
+
+        if (cancelled) return;
+
+        if (saved.status === 'DELETED') {
+          localStorage.removeItem(ACTIVE_PROJECT_KEY);
+          return;
+        }
+
+        setProject(saved);
+        setActiveStep(stepForStatus(saved.status));
+      } catch (err) {
+        console.error('No se pudo reanudar el proyecto guardado', err);
+        localStorage.removeItem(ACTIVE_PROJECT_KEY);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // =========================
+  // POLLING REACTIVO AL ESTADO
+  // =========================
+  // Mientras el proyecto esté en un estado de "generando" y no haya modelo 3D,
+  // consultamos el backend cada 5s. El intervalo se limpia solo al desmontar o
+  // al cambiar el estado, así no se duplica ni queda colgado.
+  useEffect(() => {
+    if (!project) return;
+
+    const stillGenerating =
+      isGenerating(project.status) && !project.model3DUrl;
+
+    if (!stillGenerating) return;
+
+    setLoading(true);
+
+    const interval = setInterval(async () => {
+      try {
+        const updated = await projectService.getProject(project.id);
+
+        setProject(updated);
+
+        if (updated.model3DUrl) {
+          setActiveStep(2);
+          setLoading(false);
+          setSuccess('¡Modelo 3D generado con éxito!');
+        } else if (updated.status === 'WAITING_2D_APPROVAL') {
+          setActiveStep(1);
+          setLoading(false);
+          setSuccess('Render 2D generado correctamente.');
+        } else if (
+          updated.status === 'FAILED' ||
+          updated.status === 'ERROR'
+        ) {
+          setLoading(false);
+          setError('Error durante la generación.');
+        }
+      } catch (err) {
+        console.error('Error consultando el estado del proyecto', err);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+    // Solo reiniciamos el intervalo cuando cambia el proyecto, su estado
+    // o aparece el modelo 3D.
+  }, [project?.id, project?.status, project?.model3DUrl]);
+
+  // =========================
+  // REINICIAR FLUJO (nuevo proyecto)
+  // =========================
+  const resetFlow = () => {
+    localStorage.removeItem(ACTIVE_PROJECT_KEY);
+    setProject(null);
+    setActiveStep(0);
+    setSelectedFile(null);
+    setProjectName('');
+    setDescription('');
+    setCategory(null);
+    setError('');
+    setSuccess('');
+    setLoading(false);
+  };
+
+  // =========================
   // FILE CHANGE
   // =========================
   const handleFileChange = (
@@ -158,6 +303,9 @@ export default function NewProject() {
       console.log('Proyecto creado:', createdProject);
 
       setProject(createdProject);
+
+      // Recordamos el proyecto para poder reanudarlo si cambiamos de ventana.
+      localStorage.setItem(ACTIVE_PROJECT_KEY, createdProject.id);
 
       // PASO 2: GENERAR 2D
       console.log('2. Generando render 2D...');
@@ -226,27 +374,17 @@ export default function NewProject() {
     try {
       await projectService.rejectProject(project.id);
 
+      // Limpiamos el flujo y el proyecto guardado: empezamos de cero.
+      resetFlow();
+
       setError(
         'El diseño fue rechazado. Intenta subir otra imagen.'
       );
-
-      setActiveStep(0);
-
-      setProject(null);
-
-      setSelectedFile(null);
-
-      setDescription('');
-
-      setProjectName('');
-
-      setCategory(null);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
           'Error al rechazar el diseño.'
       );
-    } finally {
       setLoading(false);
     }
   };
@@ -262,13 +400,15 @@ export default function NewProject() {
     setLoading(true);
 
     try {
-      await projectService.generate3D(project.id);
+      const updated = await projectService.generate3D(project.id);
+
+      // Al pasar a GENERATING_3D_MODEL, el effect de polling arranca solo
+      // y sigue aunque cambies de ventana (el estado vive en el backend).
+      setProject(updated);
 
       setSuccess(
         '¡Generación 3D iniciada!'
       );
-
-      pollProjectStatus(project.id);
     } catch (err: any) {
       setError(
         err.response?.data?.message ||
@@ -279,40 +419,8 @@ export default function NewProject() {
     }
   };
 
-  // =========================
-  // POLLING
-  // =========================
-  const pollProjectStatus = (projectId: string) => {
-    const interval = setInterval(async () => {
-      try {
-        const updatedProject =
-          await projectService.getProject(projectId);
-
-        setProject(updatedProject);
-
-        if (updatedProject.model3DUrl) {
-          clearInterval(interval);
-
-          setLoading(false);
-
-          setSuccess('¡Modelo 3D generado con éxito!');
-        }
-
-        if (
-          updatedProject.status === 'FAILED' ||
-          updatedProject.status === 'ERROR'
-        ) {
-          clearInterval(interval);
-
-          setLoading(false);
-
-          setError('Error durante la generación 3D.');
-        }
-      } catch (err) {
-        console.error('Error polling project status', err);
-      }
-    }, 5000);
-  };
+  const selectedCategory =
+    categories.find((c) => c.value === category) ?? null;
 
   return (
     <Box sx={{ 
@@ -461,12 +569,41 @@ export default function NewProject() {
           )}
 
           {/* ========================= */}
-          {/* STEP 0 */}
+          {/* STEP 0 - GENERANDO (al reanudar) */}
           {/* ========================= */}
-          {activeStep === 0 && (
+          {activeStep === 0 &&
+            project &&
+            isGenerating(project.status) && (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <CircularProgress
+                  size={80}
+                  thickness={4}
+                  sx={{ mb: 4, color: 'primary.main' }}
+                />
+
+                <Typography variant="h6" color="primary">
+                  Generando tu render 2D...
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  Puedes cambiar de ventana; el proceso continúa y
+                  se mostrará aquí al terminar.
+                </Typography>
+              </Box>
+            )}
+
+          {/* ========================= */}
+          {/* STEP 0 - FORMULARIO */}
+          {/* ========================= */}
+          {activeStep === 0 &&
+            !(project && isGenerating(project.status)) && (
             <Box
               sx={{
-                maxWidth: 500,
+                maxWidth: 640,
                 mx: 'auto',
                 textAlign: 'center',
               }}
@@ -496,7 +633,7 @@ export default function NewProject() {
                     xs: '1fr',
                     sm: 'repeat(3, 1fr)',
                   },
-                  gap: 2,
+                  gap: 1.5,
                   mb: 4,
                 }}
               >
@@ -511,65 +648,78 @@ export default function NewProject() {
                         !loading && setCategory(cat.value)
                       }
                       sx={{
-                        textAlign: 'center',
-                        p: 2.5,
-                        height: '100%',
-                        borderRadius: 4,
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1.25,
+                        textAlign: 'left',
+                        px: 1.75,
+                        py: 1.25,
+                        borderRadius: 3,
                         cursor: loading ? 'default' : 'pointer',
-                        transition: 'all 0.3s',
+                        transition: 'all 0.25s',
 
                         border: '2px solid',
                         borderColor: selected
-                          ? 'primary.main'
+                          ? cat.color
                           : 'rgba(107, 155, 209, 0.2)',
 
                         bgcolor: selected
-                          ? 'rgba(107, 155, 209, 0.08)'
+                          ? `${cat.color}14`
                           : 'transparent',
 
                         boxShadow: selected
-                          ? '0 6px 18px rgba(44, 74, 109, 0.12)'
+                          ? `0 4px 14px ${cat.color}33`
                           : 'none',
 
                         '&:hover': {
-                          borderColor: loading
+                          borderColor: loading ? '' : cat.color,
+                          bgcolor: loading
                             ? ''
-                            : 'primary.main',
-                          transform: loading
-                            ? 'none'
-                            : 'translateY(-3px)',
+                            : `${cat.color}0D`,
                         },
                       }}
                     >
-                      <Icon
+                      {/* ICON CHIP */}
+                      <Box
                         sx={{
-                          fontSize: 42,
-                          mb: 1,
-                          color: selected
-                            ? 'primary.main'
-                            : 'text.secondary',
-                        }}
-                      />
-
-                      <Typography
-                        variant="subtitle1"
-                        sx={{
-                          fontWeight: 700,
-                          color: selected
-                            ? 'primary.dark'
-                            : 'text.primary',
+                          flexShrink: 0,
+                          width: 38,
+                          height: 38,
+                          borderRadius: 2,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: `${cat.color}1F`,
+                          color: cat.color,
                         }}
                       >
-                        {cat.title}
-                      </Typography>
+                        <Icon sx={{ fontSize: 22 }} />
+                      </Box>
 
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: 'block', mt: 0.5 }}
-                      >
-                        {cat.description}
-                      </Typography>
+                      {/* TEXT */}
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography
+                          variant="subtitle2"
+                          sx={{
+                            fontWeight: 700,
+                            lineHeight: 1.15,
+                            color: selected
+                              ? cat.color
+                              : 'text.primary',
+                          }}
+                        >
+                          {cat.title}
+                        </Typography>
+
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: 'block', lineHeight: 1.2 }}
+                        >
+                          {cat.description}
+                        </Typography>
+                      </Box>
                     </Box>
                   );
                 })}
@@ -584,6 +734,11 @@ export default function NewProject() {
                 onChange={(e) =>
                   setProjectName(e.target.value)
                 }
+                slotProps={{
+                  htmlInput: { maxLength: 30 },
+                  formHelperText: { sx: { textAlign: 'right', mr: 0 } },
+                }}
+                helperText={`${projectName.length}/30`}
                 sx={{ mb: 3 }}
                 disabled={loading}
               />
@@ -593,12 +748,25 @@ export default function NewProject() {
                 fullWidth
                 multiline
                 rows={4}
-                label="Describe la casa que deseas generar"
-                placeholder="Ejemplo: Casa moderna de 4 pisos con piscina, grandes ventanales y jardín."
+                label={
+                  selectedCategory
+                    ? selectedCategory.promptLabel
+                    : 'Describe lo que deseas generar'
+                }
+                placeholder={
+                  selectedCategory
+                    ? selectedCategory.promptPlaceholder
+                    : 'Primero elige una categoría arriba.'
+                }
                 value={description}
                 onChange={(e) =>
                   setDescription(e.target.value)
                 }
+                slotProps={{
+                  htmlInput: { maxLength: 300 },
+                  formHelperText: { sx: { textAlign: 'right', mr: 0 } },
+                }}
+                helperText={`${description.length}/300`}
                 sx={{ mb: 4 }}
                 disabled={loading}
               />
@@ -932,6 +1100,17 @@ export default function NewProject() {
                   >
                     Descargar Modelo 3D (.glb)
                   </Button>
+
+                  <Box sx={{ mt: 3 }}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      onClick={resetFlow}
+                      sx={{ px: 4, py: 1.25 }}
+                    >
+                      Crear nuevo proyecto
+                    </Button>
+                  </Box>
                 </Box>
               )}
             </Box>
