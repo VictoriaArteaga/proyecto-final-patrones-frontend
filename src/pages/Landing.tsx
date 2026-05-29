@@ -105,7 +105,7 @@ export default function Landing() {
                   lineHeight: 1.1,
                 }}
               >
-                Arq- 3✿
+                Arq-3✿
               </Typography>
 
               <Typography
@@ -427,22 +427,187 @@ export default function Landing() {
       >
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', gap: 6, flexDirection: { xs: 'column', md: 'row' }, alignItems: 'center' }}>
+            {/* CAMINITO DIAGONAL CON PASOS */}
             <Box
               sx={{
                 flex: 1,
-                background: 'linear-gradient(135deg, rgba(107, 155, 209, 0.15) 0%, rgba(168, 216, 234, 0.15) 100%)',
+                background: 'linear-gradient(135deg, rgba(107, 155, 209, 0.08) 0%, rgba(168, 216, 234, 0.08) 100%)',
                 borderRadius: 4,
                 p: { xs: 4, md: 6 },
-                border: '1px solid rgba(107, 155, 209, 0.2)',
+                border: '2px solid rgba(107, 155, 209, 0.15)',
+                minHeight: '280px',
+                position: 'relative',
+                overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: '300px',
               }}
             >
-              <Typography variant="h3" sx={{ fontSize: '5rem', textAlign: 'center', color: 'primary.dark' }}>
-                Arq- 3✿
-              </Typography>
+              {/* CONTENEDOR DE PASOS EN HORIZONTAL */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-around',
+                  width: '100%',
+                  gap: 2,
+                  px: 2,
+                }}
+              >
+                {/* PASO 1 */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    animation: 'fadeIn 0.8s ease-out 0.2s backwards',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 70,
+                      height: 70,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #6B9BD1 0%, #A8D8EA 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 800,
+                      fontSize: '2rem',
+                      boxShadow: '0 10px 30px rgba(107, 155, 209, 0.3)',
+                      border: '3px solid white',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    1
+                  </Box>
+                  <Box sx={{ textAlign: 'center', maxWidth: '110px' }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 0.4, color: 'primary.dark' }}>
+                      Selecciona
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 400, fontSize: '0.8rem' }}>
+                      Sube tu foto
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* FLECHA O SEPARADOR */}
+                <Box
+                  sx={{
+                    fontSize: '1.5rem',
+                    color: 'rgba(107, 155, 209, 0.3)',
+                    animation: 'fadeIn 0.8s ease-out 0.4s backwards',
+                  }}
+                >
+                  →
+                </Box>
+
+                {/* PASO 2 */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    animation: 'fadeIn 0.8s ease-out 0.6s backwards',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 70,
+                      height: 70,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #9E8DAD 0%, #E8D1E0 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 800,
+                      fontSize: '2rem',
+                      boxShadow: '0 10px 30px rgba(158, 141, 173, 0.3)',
+                      border: '3px solid white',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    2
+                  </Box>
+                  <Box sx={{ textAlign: 'center', maxWidth: '110px' }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 0.4, color: 'primary.dark' }}>
+                      Revisa
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 400, fontSize: '0.8rem' }}>
+                      Render 2D
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {/* FLECHA O SEPARADOR */}
+                <Box
+                  sx={{
+                    fontSize: '1.5rem',
+                    color: 'rgba(158, 141, 173, 0.3)',
+                    animation: 'fadeIn 0.8s ease-out 0.8s backwards',
+                  }}
+                >
+                  →
+                </Box>
+
+                {/* PASO 3 */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 1.5,
+                    animation: 'fadeIn 0.8s ease-out 1s backwards',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 70,
+                      height: 70,
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #2C4A6D 0%, #6B9BD1 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontWeight: 800,
+                      fontSize: '2rem',
+                      boxShadow: '0 10px 30px rgba(44, 74, 109, 0.3)',
+                      border: '3px solid white',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    3
+                  </Box>
+                  <Box sx={{ textAlign: 'center', maxWidth: '110px' }}>
+                    <Typography sx={{ fontWeight: 700, fontSize: '0.95rem', mb: 0.4, color: 'primary.dark' }}>
+                      Descarga
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 400, fontSize: '0.8rem' }}>
+                      Modelo 3D
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
             </Box>
 
             <Box sx={{ flex: 1 }}>
