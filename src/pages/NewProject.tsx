@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Box,
   Container,
@@ -34,6 +34,7 @@ import type {
   DesignCategory,
   ProjectResponseDTO,
 } from '../types/project.types';
+import ModelViewer from '../components/ModelViewer';
 
 const steps = [
   'Subir Fotografía',
@@ -165,6 +166,14 @@ export default function NewProject() {
   const [success, setSuccess] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Create an Object URL from the uploaded file for the 3D background
+  const backgroundImageUrl = useMemo(() => {
+    if (selectedFile) {
+      return URL.createObjectURL(selectedFile);
+    }
+    return '';
+  }, [selectedFile]);
 
   // =========================
   // REANUDAR PROYECTO EN CURSO (al montar)
@@ -1048,6 +1057,14 @@ export default function NewProject() {
                       ¡El modelo 3D está listo!
                     </Typography>
                   </Alert>
+
+                  {/* ── 3D Viewer ── */}
+                  <Box sx={{ mb: 4 }}>
+                    <ModelViewer
+                      modelUrl={project.model3DUrl}
+                      backgroundImageUrl={backgroundImageUrl}
+                    />
+                  </Box>
 
                   <Button
                     variant="contained"
