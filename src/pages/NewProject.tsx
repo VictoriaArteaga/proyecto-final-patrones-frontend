@@ -36,6 +36,7 @@ import { useNotifications } from '../context/NotificationsContext';
 import type {
   DesignCategory,
   ProjectResponseDTO,
+  ProjectParametersInput,
 } from '../types/project.types';
 import ModelViewer from '../components/ModelViewer';
 
@@ -86,6 +87,74 @@ const categories: {
       'Ej: Estantería de madera clara de 3 niveles, estilo minimalista.',
   },
 ];
+
+// Campos que habilita cada categoría al refinar (coinciden con los validadores
+// y prompt builders del backend para cada DesignCategory).
+type ParamFieldType = 'text' | 'number' | 'int' | 'list';
+
+interface ParamField {
+  key: keyof ProjectParametersInput;
+  label: string;
+  type: ParamFieldType;
+  required?: boolean;
+  placeholder?: string;
+}
+
+const CATEGORY_PARAM_FIELDS: Record<DesignCategory, ParamField[]> = {
+  EXTERIOR_ARCHITECTURE: [
+    { key: 'constructionType', label: 'Tipo de construcción', type: 'text', placeholder: 'Ej: casa familiar, edificio de oficinas' },
+    { key: 'color', label: 'Color predominante', type: 'text', placeholder: 'Ej: blanco con detalles en madera' },
+    { key: 'numberOfFloors', label: 'Número de pisos', type: 'int' },
+    { key: 'numberOfRooms', label: 'Número de habitaciones', type: 'int' },
+    { key: 'numberOfBathrooms', label: 'Número de baños', type: 'int' },
+    { key: 'lotWidth', label: 'Ancho del lote (m)', type: 'number' },
+    { key: 'lotLength', label: 'Largo del lote (m)', type: 'number' },
+    { key: 'totalArea', label: 'Área total (m²)', type: 'number' },
+    { key: 'additionalElements', label: 'Elementos adicionales', type: 'list', placeholder: 'Separados por coma: piscina, jardín, garaje' },
+  ],
+  INTERIOR_ROOM: [
+    { key: 'roomType', label: 'Tipo de espacio', type: 'text', required: true, placeholder: 'Ej: sala, cuarto, cocina' },
+    { key: 'styleTrend', label: 'Estilo o tendencia', type: 'text', placeholder: 'Ej: escandinavo, industrial, minimalista' },
+    { key: 'color', label: 'Paleta de color', type: 'text', placeholder: 'Ej: tonos tierra y crema' },
+    { key: 'materials', label: 'Materiales', type: 'text', placeholder: 'Ej: madera, tela, metal' },
+    { key: 'additionalElements', label: 'Elementos adicionales', type: 'list', placeholder: 'Separados por coma: plantas, alfombra, cuadros' },
+  ],
+  FURNITURE_ITEM: [
+    { key: 'furnitureType', label: 'Tipo de mueble u objeto', type: 'text', required: true, placeholder: 'Ej: estantería, sofá, mesa, lámpara' },
+    { key: 'materials', label: 'Materiales', type: 'text', placeholder: 'Ej: madera clara, metal' },
+    { key: 'color', label: 'Color', type: 'text', placeholder: 'Ej: gris, natural' },
+    { key: 'styleTrend', label: 'Estilo', type: 'text', placeholder: 'Ej: minimalista, rústico' },
+    { key: 'placement', label: 'Ubicación en la escena', type: 'text', placeholder: 'Ej: junto a la ventana' },
+    { key: 'furnitureWidthCm', label: 'Ancho (cm)', type: 'number' },
+    { key: 'furnitureHeightCm', label: 'Alto (cm)', type: 'number' },
+    { key: 'furnitureDepthCm', label: 'Profundidad (cm)', type: 'number' },
+  ],
+};
+
+// Construye filas (etiqueta + valor) de los parámetros que SÍ tienen valor,
+// para mostrarlos junto a la imagen regenerada.
+const buildUsedParamRows = (
+  category: DesignCategory | null,
+  parameters: any
+): { label: string; value: string }[] => {
+  if (!category || !parameters) return [];
+  const rows: { label: string; value: string }[] = [];
+  for (const f of CATEGORY_PARAM_FIELDS[category]) {
+    const v = parameters[f.key];
+    if (
+      v === null ||
+      v === undefined ||
+      v === '' ||
+      (Array.isArray(v) && v.length === 0)
+    )
+      continue;
+    rows.push({
+      label: f.label,
+      value: Array.isArray(v) ? v.join(', ') : String(v),
+    });
+  }
+  return rows;
+};
 
 // Estados del backend en los que la IA está trabajando (hay que hacer polling).
 const GENERATING_STATES = [
@@ -169,6 +238,9 @@ export default function NewProject() {
 
   // Marca que el usuario detuvo la generación 3D (para mostrar "Reanudar").
   const [cancelled3D, setCancelled3D] = useState(false);
+
+  // Parámetros del formulario de refinamiento (cuando el diseño es rechazado).
+  const [params, setParams] = useState<Record<string, string>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -316,6 +388,7 @@ export default function NewProject() {
     setDescription('');
     setCategory(null);
     setCancelled3D(false);
+    setParams({});
     setError('');
     setSuccess('');
     setLoading(false);
@@ -429,18 +502,67 @@ export default function NewProject() {
     setLoading(true);
 
     try {
-      await projectService.rejectProject(project.id);
+      const rejected = await projectService.rejectProject(project.id);
 
-      // Limpiamos el flujo y el proyecto guardado: empezamos de cero.
-      resetFlow();
-
-      setError(
-        'Descartaste el diseño. Sube otra imagen para intentarlo de nuevo.'
+      // No pedimos otra imagen: pasamos al formulario de refinamiento con
+      // parámetros (misma imagen, más detalle) según la categoría.
+      setProject(rejected); // status REJECTED_2D
+      setParams({});
+      setActiveStep(1);
+      setSuccess(
+        'Cuéntanos más detalles y ajusta los parámetros para mejorar el diseño.'
       );
     } catch (err: any) {
       setError(
         getFriendlyError(err, 'No pudimos descartar el diseño. Inténtalo de nuevo.')
       );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // =========================
+  // REGENERAR 2D (tras rechazo, con descripción + parámetros)
+  // =========================
+  const handleRegenerate2D = async () => {
+    if (!project || !project.category) return;
+
+    const fields = CATEGORY_PARAM_FIELDS[project.category];
+
+    // Construimos el objeto de parámetros solo con los campos diligenciados.
+    const parameters: Record<string, unknown> = {};
+    for (const field of fields) {
+      const raw = (params[field.key] || '').trim();
+      if (!raw) continue;
+      if (field.type === 'int') parameters[field.key] = parseInt(raw, 10);
+      else if (field.type === 'number') parameters[field.key] = parseFloat(raw);
+      else if (field.type === 'list')
+        parameters[field.key] = raw
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+      else parameters[field.key] = raw;
+    }
+
+    setError('');
+    setSuccess('');
+    setLoading(true);
+
+    try {
+      const updated = await projectService.regenerate2D(
+        project.id,
+        description,
+        parameters as ProjectParametersInput
+      );
+
+      setProject(updated); // WAITING_2D_APPROVAL con el nuevo render
+      setActiveStep(1);
+      setSuccess('¡Generamos un nuevo diseño con tus indicaciones! Revísalo.');
+    } catch (err: any) {
+      setError(
+        getFriendlyError(err, 'No pudimos regenerar el diseño. Inténtalo de nuevo.')
+      );
+    } finally {
       setLoading(false);
     }
   };
@@ -502,6 +624,11 @@ export default function NewProject() {
 
   const selectedCategory =
     categories.find((c) => c.value === category) ?? null;
+
+  // Parámetros usados (para mostrarlos junto a la imagen regenerada).
+  const usedParamRows = project
+    ? buildUsedParamRows(project.category, project.parameters)
+    : [];
 
   return (
     <Box sx={{ 
@@ -963,12 +1090,228 @@ export default function NewProject() {
           )}
 
           {/* ========================= */}
-          {/* STEP 1 */}
+          {/* STEP 1 - REGENERANDO CON PARÁMETROS */}
           {/* ========================= */}
-          {activeStep === 1 && project && (
-            <Box sx={{ textAlign: 'center' }}>
+          {activeStep === 1 &&
+            project &&
+            project.status === 'GENERATING_2D_WITH_PARAMS' && (
+              <Box sx={{ textAlign: 'center', py: 6 }}>
+                <CircularProgress
+                  size={80}
+                  thickness={4}
+                  sx={{ mb: 4, color: 'primary.main' }}
+                />
+                <Typography variant="h6" color="primary">
+                  Generando tu nuevo diseño 2D...
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 1 }}
+                >
+                  Puedes cambiar de ventana; el proceso continúa y se
+                  mostrará aquí al terminar.
+                </Typography>
+              </Box>
+            )}
+
+          {/* ========================= */}
+          {/* STEP 1 - REFINAR (diseño rechazado: más parámetros) */}
+          {/* ========================= */}
+          {activeStep === 1 &&
+            project &&
+            project.status === 'REJECTED_2D' && (
+              <Box>
+                <Typography
+                  variant="h5"
+                  align="center"
+                  gutterBottom
+                  sx={{ fontWeight: 600 }}
+                >
+                  Mejoremos tu diseño
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  align="center"
+                  sx={{ mb: 4 }}
+                >
+                  Danos más detalle y ajusta los parámetros. La nueva propuesta
+                  se generará sobre tu imagen original (no necesitas subirla
+                  otra vez).
+                </Typography>
+
+                {/* DOS COLUMNAS: formulario (izq) + última imagen generada (der) */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    gap: 4,
+                    alignItems: 'flex-start',
+                    mb: 4,
+                  }}
+                >
+                  {/* IZQUIERDA: parámetros */}
+                  <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={4}
+                      label="Describe con más detalle lo que quieres"
+                      placeholder="Ej: igual pero con más ventanas y fachada en piedra clara."
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      slotProps={{
+                        htmlInput: { maxLength: 300 },
+                        formHelperText: { sx: { textAlign: 'right', mr: 0 } },
+                      }}
+                      helperText={`${description.length}/300`}
+                      sx={{ mb: 3 }}
+                      disabled={loading}
+                    />
+
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, mb: 1.5 }}
+                    >
+                      Parámetros del diseño
+                    </Typography>
+
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                        gap: 2,
+                      }}
+                    >
+                      {(project.category
+                        ? CATEGORY_PARAM_FIELDS[project.category]
+                        : []
+                      ).map((field) => (
+                        <TextField
+                          key={field.key}
+                          fullWidth
+                          label={`${field.label}${field.required ? ' *' : ''}`}
+                          placeholder={field.placeholder}
+                          type={
+                            field.type === 'number' || field.type === 'int'
+                              ? 'number'
+                              : 'text'
+                          }
+                          value={params[field.key] || ''}
+                          onChange={(e) =>
+                            setParams((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.value,
+                            }))
+                          }
+                          disabled={loading}
+                          error={
+                            !!field.required &&
+                            !(params[field.key] || '').trim()
+                          }
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+
+                  {/* DERECHA: última imagen generada por la IA */}
+                  <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, mb: 1.5 }}
+                    >
+                      Diseño actual
+                    </Typography>
+                    <Box
+                      sx={{
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                        boxShadow: '0 8px 32px rgba(44, 74, 109, 0.15)',
+                        border: '1px solid rgba(107, 155, 209, 0.2)',
+                        bgcolor: '#F8F9FA',
+                      }}
+                    >
+                      {project.image2DUrl ? (
+                        <CardMedia
+                          component="img"
+                          image={project.image2DUrl}
+                          alt="Último diseño generado"
+                          sx={{ width: '100%', maxHeight: 460, objectFit: 'contain' }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            height: 400,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Typography color="text.secondary">
+                            Imagen no disponible
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* BOTONES CENTRADOS */}
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 2,
+                    justifyContent: 'center',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    color="inherit"
+                    onClick={resetFlow}
+                    disabled={loading}
+                    sx={{ px: 4, py: 1.5, borderRadius: 12 }}
+                  >
+                    Empezar de nuevo
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AutoAwesomeIcon />}
+                    onClick={handleRegenerate2D}
+                    disabled={
+                      loading ||
+                      (project.category
+                        ? CATEGORY_PARAM_FIELDS[project.category]
+                        : []
+                      )
+                        .filter((f) => f.required)
+                        .some((f) => !(params[f.key] || '').trim())
+                    }
+                    sx={{ px: 4, py: 1.5 }}
+                  >
+                    {loading ? (
+                      <CircularProgress size={26} color="inherit" />
+                    ) : (
+                      'Generar nuevo diseño'
+                    )}
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+          {/* ========================= */}
+          {/* STEP 1 - REVISAR (esperando aprobación) */}
+          {/* ========================= */}
+          {activeStep === 1 &&
+            project &&
+            project.status !== 'REJECTED_2D' &&
+            project.status !== 'GENERATING_2D_WITH_PARAMS' && (
+            <Box sx={{ py: 2 }}>
               <Typography
                 variant="h5"
+                align="center"
                 gutterBottom
                 sx={{ fontWeight: 600 }}
               >
@@ -978,61 +1321,148 @@ export default function NewProject() {
               <Typography
                 variant="body1"
                 color="text.secondary"
+                align="center"
                 sx={{ mb: 4 }}
               >
-                Nuestra IA ha interpretado tu imagen y
-                generado esta propuesta arquitectónica.
+                {project.parameters
+                  ? 'Generamos una nueva propuesta con los parámetros que indicaste.'
+                  : 'Nuestra IA ha interpretado tu imagen y generado esta propuesta.'}
               </Typography>
 
-              <Box
-                sx={{
-                  maxWidth: 600,
-                  mx: 'auto',
-                  mb: 5,
+              {project.parameters ? (
+                /* PARÁMETROS A LA IZQUIERDA + IMAGEN A LA DERECHA */
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    gap: 4,
+                    alignItems: 'flex-start',
+                    mb: 4,
+                  }}
+                >
+                  <Box sx={{ flex: { md: '0 0 280px' }, width: '100%' }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, mb: 1.5 }}
+                    >
+                      Parámetros usados
+                    </Typography>
+                    <Box
+                      sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
+                    >
+                      {usedParamRows.length > 0 ? (
+                        usedParamRows.map((row) => (
+                          <Box
+                            key={row.label}
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              gap: 2,
+                              p: 1.25,
+                              borderRadius: 2,
+                              bgcolor: 'rgba(107, 155, 209, 0.08)',
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ fontWeight: 600 }}
+                            >
+                              {row.label}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ fontWeight: 700, textAlign: 'right' }}
+                            >
+                              {row.value}
+                            </Typography>
+                          </Box>
+                        ))
+                      ) : (
+                        <Typography variant="body2" color="text.secondary">
+                          Sin parámetros adicionales.
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
 
-                  borderRadius: 4,
-
-                  overflow: 'hidden',
-
-                  boxShadow:
-                    '0 8px 32px rgba(44, 74, 109, 0.15)',
-
-                  border:
-                    '1px solid rgba(107, 155, 209, 0.2)',
-
-                  bgcolor: '#F8F9FA',
-                }}
-              >
-                {project.image2DUrl ? (
-                  <CardMedia
-                    component="img"
-                    height="400"
-                    image={project.image2DUrl}
-                    alt="Render 2D"
-                    sx={{ objectFit: 'contain' }}
-                  />
-                ) : (
                   <Box
                     sx={{
-                      height: 400,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      flex: 1,
+                      minWidth: 0,
+                      width: '100%',
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      boxShadow: '0 8px 32px rgba(44, 74, 109, 0.15)',
+                      border: '1px solid rgba(107, 155, 209, 0.2)',
+                      bgcolor: '#F8F9FA',
                     }}
                   >
-                    <Typography color="text.secondary">
-                      Imagen no disponible
-                    </Typography>
+                    {project.image2DUrl ? (
+                      <CardMedia
+                        component="img"
+                        image={project.image2DUrl}
+                        alt="Render 2D"
+                        sx={{ width: '100%', maxHeight: 460, objectFit: 'contain' }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          height: 400,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Typography color="text.secondary">
+                          Imagen no disponible
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
-                )}
-              </Box>
+                </Box>
+              ) : (
+                /* IMAGEN CENTRADA (render inicial) */
+                <Box
+                  sx={{
+                    maxWidth: 600,
+                    mx: 'auto',
+                    mb: 4,
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    boxShadow: '0 8px 32px rgba(44, 74, 109, 0.15)',
+                    border: '1px solid rgba(107, 155, 209, 0.2)',
+                    bgcolor: '#F8F9FA',
+                  }}
+                >
+                  {project.image2DUrl ? (
+                    <CardMedia
+                      component="img"
+                      height="400"
+                      image={project.image2DUrl}
+                      alt="Render 2D"
+                      sx={{ objectFit: 'contain' }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        height: 400,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Typography color="text.secondary">
+                        Imagen no disponible
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
 
+              {/* BOTONES CENTRADOS */}
               <Box
-                sx={{
-                  display: 'flex',
-                  gap: 3,
-                  justifyContent: 'center',
-                }}
+                sx={{ display: 'flex', gap: 3, justifyContent: 'center' }}
               >
                 <Button
                   variant="outlined"
@@ -1045,10 +1475,7 @@ export default function NewProject() {
                     py: 1.5,
                     borderRadius: 12,
                     borderWidth: 2,
-
-                    '&:hover': {
-                      borderWidth: 2,
-                    },
+                    '&:hover': { borderWidth: 2 },
                   }}
                 >
                   Rechazar
@@ -1063,18 +1490,13 @@ export default function NewProject() {
                   sx={{
                     px: 4,
                     py: 1.5,
-
                     background:
                       'linear-gradient(45deg, #00C853 30%, #69F0AE 90%)',
-
                     color: '#000',
                   }}
                 >
                   {loading ? (
-                    <CircularProgress
-                      size={26}
-                      color="inherit"
-                    />
+                    <CircularProgress size={26} color="inherit" />
                   ) : (
                     'Aprobar Diseño'
                   )}
