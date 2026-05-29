@@ -36,6 +36,7 @@ import type {
   DesignCategory,
   ProjectResponseDTO,
 } from '../types/project.types';
+import ModelViewer from '../components/ModelViewer';
 
 const steps = [
   'Subir Fotografía',
@@ -1088,26 +1089,29 @@ export default function NewProject() {
                     </Typography>
                   </Alert>
 
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    href={project.model3DUrl}
-                    target="_blank"
-                    size="large"
-                    sx={{
-                      px: 6,
-                      py: 2,
-                      fontSize: '1.2rem',
-                    }}
-                  >
-                    Descargar Modelo 3D (.glb)
-                  </Button>
+                  <Box sx={{ width: '100%', mb: 4 }}>
+                    <ModelViewer
+                      modelUrl={project.model3DUrl}
+                      backgroundImageUrl={project.imageOriginalUrl || ''}
+                    />
+                  </Box>
 
-                  <Box sx={{ mt: 3 }}>
+                  <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      href={project.model3DUrl}
+                      target="_blank"
+                      size="large"
+                      sx={{ px: 4, py: 1.25 }}
+                    >
+                      Descargar Modelo (.glb)
+                    </Button>
                     <Button
                       variant="outlined"
                       color="primary"
                       onClick={resetFlow}
+                      size="large"
                       sx={{ px: 4, py: 1.25 }}
                     >
                       Crear nuevo proyecto
