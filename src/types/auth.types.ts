@@ -21,4 +21,6 @@ export interface UserProfileDTO {
   role: string;
   recoveryEmail: string | null;
   twoFactorEnabled: boolean;
+  // Foto de perfil persistida en el backend (URL o data-URL base64). null = sin foto.
+  avatarUrl: string | null;
 }
