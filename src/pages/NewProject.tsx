@@ -32,6 +32,7 @@ import {
 import { projectService } from '../services/project.service';
 import { getFriendlyError } from '../utils/errorMessages';
 import { ACTIVE_PROJECT_KEY } from '../utils/storageKeys';
+import { useNotifications } from '../context/NotificationsContext';
 import type {
   DesignCategory,
   ProjectResponseDTO,
@@ -164,6 +165,11 @@ export default function NewProject() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const { addNotification } = useNotifications();
+
+  // Marca que el usuario detuvo la generación 3D (para mostrar "Reanudar").
+  const [cancelled3D, setCancelled3D] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Create an Object URL from the uploaded file for the 3D background
@@ -200,7 +206,17 @@ export default function NewProject() {
         }
 
         setProject(saved);
-        setActiveStep(stepForStatus(saved.status));
+
+        // Si la generación falló: si ya hay diseño 2D, lo dejamos en el paso 3D
+        // para poder reintentar; si no, vuelve al inicio.
+        if (saved.status === 'FAILED') {
+          setActiveStep(saved.image2DUrl ? 2 : 0);
+          setError(
+            'La generación anterior no se completó. Puedes intentarlo de nuevo.'
+          );
+        } else {
+          setActiveStep(stepForStatus(saved.status));
+        }
       } catch (err) {
         console.error('No se pudo reanudar el proyecto guardado', err);
         localStorage.removeItem(ACTIVE_PROJECT_KEY);
@@ -228,9 +244,16 @@ export default function NewProject() {
 
     setLoading(true);
 
+    // Tolera fallos transitorios de red, pero se rinde tras varios seguidos
+    // (p. ej. si el backend se cae o no responde) en vez de reintentar para siempre.
+    let consecutiveFailures = 0;
+    const MAX_FAILURES = 4;
+
     const interval = setInterval(async () => {
       try {
         const updated = await projectService.getProject(project.id);
+
+        consecutiveFailures = 0; // hubo respuesta válida
 
         setProject(updated);
 
@@ -238,6 +261,10 @@ export default function NewProject() {
           setActiveStep(2);
           setLoading(false);
           setSuccess('¡Tu modelo 3D ya está listo!');
+          addNotification(
+            `Tu modelo 3D de "${updated.name}" está listo`,
+            'success'
+          );
         } else if (updated.status === 'WAITING_2D_APPROVAL') {
           setActiveStep(1);
           setLoading(false);
@@ -250,9 +277,25 @@ export default function NewProject() {
           setError(
             'No pudimos completar la generación. Por favor, inténtalo de nuevo.'
           );
+          addNotification(
+            `La generación de "${updated.name}" falló`,
+            'error'
+          );
         }
       } catch (err) {
-        console.error('Error consultando el estado del proyecto', err);
+        consecutiveFailures++;
+        console.error(
+          `Error consultando el estado del proyecto (intento ${consecutiveFailures}/${MAX_FAILURES})`,
+          err
+        );
+
+        if (consecutiveFailures >= MAX_FAILURES) {
+          clearInterval(interval);
+          setLoading(false);
+          setError(
+            'Perdimos la conexión con el servidor. Verifica que esté disponible y vuelve a intentarlo. Tu proyecto no se perdió.'
+          );
+        }
       }
     }, 5000);
 
@@ -272,6 +315,7 @@ export default function NewProject() {
     setProjectName('');
     setDescription('');
     setCategory(null);
+    setCancelled3D(false);
     setError('');
     setSuccess('');
     setLoading(false);
@@ -409,6 +453,7 @@ export default function NewProject() {
 
     setError('');
     setSuccess('');
+    setCancelled3D(false);
     setLoading(true);
 
     try {
@@ -430,6 +475,28 @@ export default function NewProject() {
       );
 
       setLoading(false);
+    }
+  };
+
+  // =========================
+  // DETENER GENERACIÓN 3D
+  // =========================
+  const handleCancel3D = async () => {
+    if (!project) return;
+
+    setError('');
+    try {
+      const updated = await projectService.cancel3D(project.id);
+
+      // Vuelve a WAITING_FINAL_APPROVAL → el polling se detiene solo.
+      setProject(updated);
+      setLoading(false);
+      setCancelled3D(true);
+      setSuccess('Generación detenida. Puedes reanudarla cuando quieras.');
+    } catch (err: any) {
+      setError(
+        getFriendlyError(err, 'No pudimos detener la generación. Inténtalo de nuevo.')
+      );
     }
   };
 
@@ -470,7 +537,7 @@ export default function NewProject() {
         pointerEvents: 'none',
       }
     }}>
-      <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', py: 4 }}>
+      <Container maxWidth={activeStep === 2 ? 'lg' : 'md'} sx={{ position: 'relative', zIndex: 1, flex: 1, display: 'flex', flexDirection: 'column', py: 4 }}>
       <Card
         sx={{
           mt: 4,
@@ -1019,49 +1086,40 @@ export default function NewProject() {
           {/* ========================= */}
           {/* STEP 2 */}
           {/* ========================= */}
-          {activeStep === 2 && project && (
+          {/* STEP 2 - AÚN SIN MODELO (generar / procesando) */}
+          {activeStep === 2 && project && !project.model3DUrl && (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <Typography
                 variant="h4"
                 gutterBottom
-                sx={{
-                  fontWeight: 700,
-                  color: 'primary.main',
-                }}
+                sx={{ fontWeight: 700, color: 'primary.main' }}
               >
-                Diseño aprobado. ¡Listo para la magia en
-                3D!
+                Diseño aprobado. ¡Listo para la magia en 3D!
               </Typography>
 
               <Typography
                 variant="h6"
                 color="text.secondary"
-                sx={{
-                  mb: 6,
-                  maxWidth: 600,
-                  mx: 'auto',
-                  fontWeight: 400,
-                }}
+                sx={{ mb: 6, maxWidth: 600, mx: 'auto', fontWeight: 400 }}
               >
-                Nuestra segunda IA tomará el concepto 2D y
-                construirá un modelo 3D detallado.
+                Nuestra segunda IA tomará el concepto 2D y construirá un
+                modelo 3D detallado.
               </Typography>
 
-              {!project.model3DUrl && !loading && (
+              {!loading && (
                 <Button
                   variant="contained"
                   color="secondary"
                   size="large"
                   onClick={handleGenerate3D}
                   startIcon={<AutoAwesomeIcon />}
-                  sx={{
-                    px: 6,
-                    py: 2,
-                    fontSize: '1.2rem',
-                    borderRadius: 12,
-                  }}
+                  sx={{ px: 6, py: 2, fontSize: '1.2rem', borderRadius: 12 }}
                 >
-                  Iniciar Generación 3D
+                  {cancelled3D
+                    ? 'Reanudar generación'
+                    : project.status === 'FAILED'
+                    ? 'Volver a generar el modelo 3D'
+                    : 'Iniciar Generación 3D'}
                 </Button>
               )}
 
@@ -1070,78 +1128,95 @@ export default function NewProject() {
                   <CircularProgress
                     size={80}
                     thickness={4}
-                    sx={{
-                      mb: 4,
-                      color: 'secondary.main',
-                    }}
+                    sx={{ mb: 4, color: 'secondary.main' }}
                   />
 
-                  <Typography
-                    variant="h6"
-                    color="primary"
-                    sx={{ mb: 3 }}
-                  >
+                  <Typography variant="h6" color="primary" sx={{ mb: 3 }}>
                     Procesando modelo 3D...
                   </Typography>
 
                   <Button
                     variant="outlined"
                     color="error"
-                    onClick={() => {
-                      localStorage.removeItem(ACTIVE_PROJECT_KEY);
-                      resetFlow();
-                    }}
+                    onClick={handleCancel3D}
                   >
-                    Cancelar y crear nuevo proyecto
+                    Detener generación
                   </Button>
                 </Box>
               )}
+            </Box>
+          )}
 
-              {project.model3DUrl && (
-                <Box sx={{ mt: 2 }}>
-                  <Alert
-                    severity="success"
-                    sx={{
-                      mb: 4,
-                      display: 'flex',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <Typography variant="h6">
-                      ¡El modelo 3D está listo!
-                    </Typography>
-                  </Alert>
+          {/* STEP 2 - MODELO LISTO: texto arriba, visor centrado y grande, botones abajo */}
+          {activeStep === 2 && project && project.model3DUrl && (
+            <Box sx={{ py: 4 }}>
+              {/* TEXTO ARRIBA (centrado) */}
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <Typography
+                  variant="h4"
+                  gutterBottom
+                  sx={{ fontWeight: 700, color: 'primary.main' }}
+                >
+                  ¡Tu modelo 3D está listo!
+                </Typography>
 
-                  <Box sx={{ width: '100%', mb: 4 }}>
-                    <ModelViewer
-                      modelUrl={project.model3DUrl}
-                      backgroundImageUrl={backgroundImageUrl}
-                    />
-                  </Box>
+                <Typography
+                  variant="body1"
+                  color="text.secondary"
+                  sx={{ mb: 2, fontWeight: 400 }}
+                >
+                  Explóralo en 360°: arrástralo para rotarlo, usa el scroll
+                  para acercarte y míralo desde cualquier ángulo.
+                </Typography>
 
-                  <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'center' }}>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      href={project.model3DUrl}
-                      target="_blank"
-                      size="large"
-                      sx={{ px: 4, py: 1.25 }}
-                    >
-                      Descargar Modelo (.glb)
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      onClick={resetFlow}
-                      size="large"
-                      sx={{ px: 4, py: 1.25 }}
-                    >
-                      Crear nuevo proyecto
-                    </Button>
-                  </Box>
-                </Box>
-              )}
+                <Alert
+                  severity="success"
+                  sx={{ borderRadius: 2, display: 'inline-flex' }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                    Generación completada
+                  </Typography>
+                </Alert>
+              </Box>
+
+              {/* VISOR centrado y más grande */}
+              <Box sx={{ width: '100%' }}>
+                <ModelViewer
+                  modelUrl={project.model3DUrl}
+                  backgroundImageUrl={backgroundImageUrl}
+                />
+              </Box>
+
+              {/* BOTONES abajo de todo */}
+              <Box
+                sx={{
+                  mt: 4,
+                  display: 'flex',
+                  gap: 2,
+                  justifyContent: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Button
+                  variant="contained"
+                  color="primary"
+                  href={project.model3DUrl}
+                  target="_blank"
+                  size="large"
+                  sx={{ px: 4, py: 1.25 }}
+                >
+                  Descargar Modelo (.glb)
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={resetFlow}
+                  size="large"
+                  sx={{ px: 4, py: 1.25 }}
+                >
+                  Crear nuevo proyecto
+                </Button>
+              </Box>
             </Box>
           )}
         </CardContent>
