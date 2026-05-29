@@ -101,5 +101,21 @@ export const projectService = {
     );
 
     return response.data;
+  },
+
+  // 7. Listar todos los proyectos del usuario
+  getProjects: async (): Promise<ProjectResponseDTO[]> => {
+
+    const response = await api.get<ProjectResponseDTO[]>(
+      '/projects'
+    );
+
+    return response.data;
+  },
+
+  // 8. Eliminar un proyecto
+  deleteProject: async (projectId: string): Promise<void> => {
+
+    await api.delete(`/projects/${projectId}`);
   }
 };
