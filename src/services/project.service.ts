@@ -38,12 +38,7 @@ export const projectService = {
     description: string
   ): Promise<ProjectResponseDTO> => {
 
-    const payload = {
-      projectId,
-      mode: 'INITIAL',
-      description,
-      parameters: null
-    };
+    const payload = { description };
 
     console.log('Payload enviado a generate-2d:', payload);
 
