@@ -1,4 +1,5 @@
-import { Suspense, useRef, useState, useEffect, useCallback } from 'react';
+import { Suspense, useRef, useState, useEffect, useCallback, useMemo, Component } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, useGLTF, Center, Grid } from '@react-three/drei';
 import * as THREE from 'three';
@@ -10,6 +11,7 @@ import {
   Tooltip,
   Paper,
   Fade,
+  Button,
 } from '@mui/material';
 import {
   Fullscreen as FullscreenIcon,
@@ -21,6 +23,7 @@ import {
   ThreeSixty as ThreeSixtyIcon,
   LightMode as LightModeIcon,
   Download as DownloadIcon,
+  ErrorOutlined as ErrorOutlineIcon,
 } from '@mui/icons-material';
 
 interface ModelViewerProps {
@@ -28,54 +31,71 @@ interface ModelViewerProps {
   backgroundImageUrl: string;
 }
 
+// Fondo 360 que gira con la escena al orbitar, optimizado para verse nítido:
+// anisotropía al máximo + material básico (sin tonemapping) = sin desenfoque.
 function BackgroundSphere({ imageUrl }: { imageUrl: string }) {
-  const { scene } = useThree();
-  const meshRef = useRef<THREE.Mesh>(null);
+  const { gl } = useThree();
+  const [texture, setTexture] = useState<THREE.Texture | null>(null);
 
   useEffect(() => {
-    if (!imageUrl) return;
-
+    let disposed = false;
     const loader = new THREE.TextureLoader();
-    loader.load(imageUrl, (texture) => {
-      texture.mapping = THREE.EquirectangularReflectionMapping;
-      texture.colorSpace = THREE.SRGBColorSpace;
-
-      scene.background = texture;
-
-      if (meshRef.current) {
-        const mat = meshRef.current.material as THREE.MeshBasicMaterial;
-        mat.map = texture;
-        mat.needsUpdate = true;
+    loader.setCrossOrigin('anonymous');
+    loader.load(imageUrl, (tex) => {
+      if (disposed) {
+        tex.dispose();
+        return;
       }
+      tex.colorSpace = THREE.SRGBColorSpace;
+      // Clave contra el desenfoque en ángulos rasantes.
+      tex.anisotropy = gl.capabilities.getMaxAnisotropy();
+      tex.magFilter = THREE.LinearFilter;
+      tex.minFilter = THREE.LinearMipmapLinearFilter;
+      tex.generateMipmaps = true;
+      tex.needsUpdate = true;
+      setTexture(tex);
     });
-
     return () => {
-      scene.background = null;
+      disposed = true;
     };
-  }, [imageUrl, scene]);
+  }, [imageUrl, gl]);
+
+  if (!texture) return null;
 
   return (
-    <mesh ref={meshRef} scale={[-1, 1, 1]}>
-      <sphereGeometry args={[50, 64, 64]} />
-      <meshBasicMaterial side={THREE.BackSide} toneMapped={false} />
+    <mesh scale={[-1, 1, 1]}>
+      <sphereGeometry args={[30, 64, 64]} />
+      <meshBasicMaterial map={texture} side={THREE.BackSide} toneMapped={false} />
     </mesh>
   );
 }
 
 function Model({ url }: { url: string }) {
   const { scene } = useGLTF(url);
-  const groupRef = useRef<THREE.Group>(null);
 
-  useFrame((state) => {
-    if (groupRef.current) {
-      groupRef.current.position.y =
-        Math.sin(state.clock.elapsedTime * 0.5) * 0.03;
-    }
-  });
+  // Escala el modelo a un tamaño objetivo grande y consistente (sin importar
+  // las dimensiones originales), y activa sombras en todas sus mallas.
+  const scale = useMemo(() => {
+    scene.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh) {
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    });
 
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    return 4.2 / maxDim;
+  }, [scene]);
+
+  // <Center>: centra el modelo en los tres ejes (queda en el centro de la vista,
+  // flotando, ya no apoyado en el piso).
   return (
     <Center>
-      <group ref={groupRef}>
+      <group scale={scale}>
         <primitive object={scene} />
       </group>
     </Center>
@@ -95,7 +115,7 @@ function FloorGrid() {
       fadeDistance={15}
       fadeStrength={1}
       followCamera={false}
-      position={[0, -0.01, 0]}
+      position={[0, -2.6, 0]}
     />
   );
 }
@@ -105,7 +125,7 @@ function CameraController({ resetTrigger }: { resetTrigger: number }) {
 
   useEffect(() => {
     if (resetTrigger > 0) {
-      camera.position.set(3, 2, 5);
+      camera.position.set(3, 2.2, 4.5);
       camera.lookAt(0, 0, 0);
     }
   }, [resetTrigger, camera]);
@@ -175,6 +195,30 @@ function ToolbarButton({
   );
 }
 
+// Captura errores al cargar el .glb (URL inválida, 404, CORS, formato no soportado).
+// Evita que un fallo de carga rompa toda la vista; avisa al padre vía onError.
+class ModelErrorBoundary extends Component<
+  { onError: () => void; children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, _info: ErrorInfo) {
+    console.error('No se pudo cargar el modelo 3D:', error);
+    this.props.onError();
+  }
+
+  render() {
+    // Si falló, no renderizamos el modelo roto dentro del Canvas.
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
+
 export default function ModelViewer({
   modelUrl,
   backgroundImageUrl,
@@ -183,6 +227,7 @@ export default function ModelViewer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [resetTrigger, setResetTrigger] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showGrid, setShowGrid] = useState(true);
   const [autoRotate, setAutoRotate] = useState(true);
   const [lightIntensity, setLightIntensity] = useState(1);
@@ -210,6 +255,7 @@ export default function ModelViewer({
 
   useEffect(() => {
     setIsLoading(true);
+    setLoadError(false);
     const timer = setTimeout(() => setIsLoading(false), 1800);
     return () => clearTimeout(timer);
   }, [modelUrl]);
@@ -228,20 +274,23 @@ export default function ModelViewer({
       sx={{
         position: 'relative',
         width: '100%',
-        height: isFullscreen ? '100vh' : { xs: 400, sm: 500, md: 600 },
+        height: isFullscreen ? '100vh' : { xs: 460, sm: 620, md: 760 },
         borderRadius: isFullscreen ? 0 : 4,
         overflow: 'hidden',
         border: '1px solid rgba(107, 155, 209, 0.15)',
         background:
           'linear-gradient(135deg, #0a0a1a 0%, #111827 50%, #0c1929 100%)',
         transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        // Cursor de "manito" para indicar que el modelo se puede arrastrar.
+        '& canvas': { cursor: 'grab' },
+        '& canvas:active': { cursor: 'grabbing' },
         '&:hover': {
           border: '1px solid rgba(107, 155, 209, 0.3)',
           boxShadow: '0 12px 48px rgba(107, 155, 209, 0.15)',
         },
       }}
     >
-      <Fade in={isLoading} timeout={400}>
+      <Fade in={isLoading && !loadError} timeout={400}>
         <Box
           sx={{
             position: 'absolute',
@@ -287,6 +336,52 @@ export default function ModelViewer({
           </Typography>
         </Box>
       </Fade>
+
+      {/* OVERLAY DE ERROR: si el modelo no se pudo cargar */}
+      {loadError && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 12,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            gap: 2,
+            px: 3,
+            background:
+              'radial-gradient(ellipse at center, rgba(15,52,96,0.97) 0%, rgba(10,10,26,0.98) 100%)',
+          }}
+        >
+          <ErrorOutlineIcon sx={{ fontSize: 56, color: '#E8D1E0' }} />
+          <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700 }}>
+            No se pudo cargar el modelo 3D
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{ color: 'rgba(168, 216, 234, 0.8)', maxWidth: 380 }}
+          >
+            El archivo puede no estar disponible o el formato no es válido.
+            Puedes intentar descargarlo directamente.
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<DownloadIcon />}
+            href={modelUrl}
+            target="_blank"
+            sx={{
+              mt: 1,
+              color: '#A8D8EA',
+              borderColor: 'rgba(168, 216, 234, 0.5)',
+              '&:hover': { borderColor: '#A8D8EA' },
+            }}
+          >
+            Descargar modelo (.glb)
+          </Button>
+        </Box>
+      )}
 
       <Box
         sx={{
@@ -368,20 +463,34 @@ export default function ModelViewer({
       </Fade>
 
       <Canvas
-        camera={{ position: [3, 2, 5], fov: 50 }}
+        camera={{ position: [3, 2.2, 4.5], fov: 45 }}
         gl={{
           antialias: true,
+          alpha: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.2,
+          toneMappingExposure: 1.5,
         }}
         shadows
-        style={{ width: '100%', height: '100%' }}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          zIndex: 1,
+          background: 'transparent',
+        }}
       >
-        <ambientLight intensity={0.4 * lightIntensity} />
-        <directionalLight position={[5, 8, 5]} intensity={1.0 * lightIntensity} castShadow shadow-mapSize={[1024, 1024]} />
-        <directionalLight position={[-3, 4, -5]} intensity={0.3 * lightIntensity} />
-        <pointLight position={[0, 3, 0]} intensity={0.4 * lightIntensity} color="#A8D8EA" />
-        <hemisphereLight args={['#A8D8EA', '#2C4A6D', 0.35 * lightIntensity]} />
+        {/* Iluminación más clara y realista */}
+        <ambientLight intensity={0.7 * lightIntensity} />
+        <directionalLight
+          position={[5, 9, 5]}
+          intensity={1.5 * lightIntensity}
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-bias={-0.0001}
+        />
+        <directionalLight position={[-4, 5, -5]} intensity={0.5 * lightIntensity} />
+        <pointLight position={[0, 4, 0]} intensity={0.5 * lightIntensity} color="#FFFFFF" />
+        <hemisphereLight args={['#FFFFFF', '#2C4A6D', 0.6 * lightIntensity]} />
 
         <CameraController resetTrigger={resetTrigger} />
 
@@ -389,15 +498,25 @@ export default function ModelViewer({
         {showGrid && <FloorGrid />}
 
         <Suspense fallback={<LoadingFallback />}>
-          <Model url={modelUrl} />
+          <ModelErrorBoundary
+            key={modelUrl}
+            onError={() => {
+              setLoadError(true);
+              setIsLoading(false);
+            }}
+          >
+            <Model url={modelUrl} />
+          </ModelErrorBoundary>
         </Suspense>
 
         <OrbitControls
+          makeDefault
+          target={[0, 0, 0]}
           enablePan
           enableZoom
           enableRotate
-          minDistance={1}
-          maxDistance={20}
+          minDistance={2}
+          maxDistance={18}
           autoRotate={autoRotate}
           autoRotateSpeed={0.4}
           dampingFactor={0.06}

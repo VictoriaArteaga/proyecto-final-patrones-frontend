@@ -92,6 +92,20 @@ export class DoublyLinkedList<T> {
     return false;
   }
 
+  // Recorre la lista y devuelve una NUEVA lista con los que cumplan el
+  // predicado, conservando el orden. O(n).
+  filter(predicate: (value: T) => boolean): DoublyLinkedList<T> {
+    const result = new DoublyLinkedList<T>();
+    let current = this.head;
+    while (current !== null) {
+      if (predicate(current.value)) {
+        result.addLast(current.value);
+      }
+      current = current.next;
+    }
+    return result;
+  }
+
   // Devuelve el primer valor que cumpla el predicado (o null). O(n).
   find(predicate: (value: T) => boolean): T | null {
     let current = this.head;

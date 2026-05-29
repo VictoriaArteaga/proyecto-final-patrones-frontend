@@ -10,7 +10,9 @@ import NewProject from './pages/NewProject';
 import DataStructures from './pages/DataStructures';
 import VerifyAccount from './pages/VerifyAccount';
 import UserProfile from './pages/UserProfile';
+import Notifications from './pages/Notifications';
 import Layout from './components/Layout';
+import { NotificationsProvider } from './context/NotificationsContext';
 
 function App() {
   return (
@@ -26,11 +28,18 @@ function App() {
           <Route path="/verify-account" element={<VerifyAccount />} />
           
           {/* Protected Routes inside Layout */}
-          <Route element={<Layout />}>
+          <Route
+            element={
+              <NotificationsProvider>
+                <Layout />
+              </NotificationsProvider>
+            }
+          >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/new-project" element={<NewProject />} />
             <Route path="/data-structures" element={<DataStructures />} />
             <Route path="/profile" element={<UserProfile />} />
+            <Route path="/notifications" element={<Notifications />} />
           </Route>
         </Routes>
       </BrowserRouter>
