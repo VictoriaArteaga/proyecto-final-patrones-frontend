@@ -29,7 +29,7 @@ export default function Layout() {
   };
 
   const menuItems = [
-    { text: 'Panel Principal', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Mis proyectos', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Nueva Generación 3D', icon: <AddBoxIcon />, path: '/new-project' }
   ];
 
@@ -44,10 +44,10 @@ export default function Layout() {
         borderBottom: '1px solid rgba(107, 155, 209, 0.1)',
       }}>
         <Avatar sx={{ bgcolor: 'primary.main', color: '#FFFFFF', fontWeight: 700 }}>
-          <span style={{ fontSize: '1.5rem' }}>🏗️</span>
+          <span style={{ fontSize: '1.5rem' }}>✿</span>
         </Avatar>
         <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'primary.dark', letterSpacing: '-0.5px' }}>
-          Arq-AI 3D
+          Arq- 3✿
         </Typography>
       </Box>
       <Divider sx={{ borderColor: 'rgba(107, 155, 209, 0.1)' }} />
@@ -98,7 +98,7 @@ export default function Layout() {
         <Button 
           fullWidth 
           variant="contained" 
-          color="error" 
+          color="secondary" 
           startIcon={<LogoutIcon />} 
           onClick={handleLogout}
           sx={{ borderRadius: 2, py: 1, fontWeight: 600 }}
