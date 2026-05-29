@@ -1115,7 +1115,7 @@ export default function NewProject() {
                   <Box sx={{ width: '100%', mb: 4 }}>
                     <ModelViewer
                       modelUrl={project.model3DUrl}
-                      backgroundImageUrl={project.imageOriginalUrl || ''}
+                      backgroundImageUrl={backgroundImageUrl}
                     />
                   </Box>
 
