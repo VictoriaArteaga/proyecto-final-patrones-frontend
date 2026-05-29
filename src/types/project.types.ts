@@ -1,7 +1,6 @@
 // Categorías de diseño soportadas por el backend (enum DesignCategory).
 export type DesignCategory =
   | 'EXTERIOR_ARCHITECTURE'
-  | 'INTERIOR_ROOM'
   | 'FURNITURE_ITEM';
 
 // Parámetros estructurados que se envían al regenerar un diseño rechazado.
@@ -17,7 +16,6 @@ export interface ProjectParametersInput {
   numberOfBathrooms?: number;
   additionalElements?: string[];
   detailDescription?: string;
-  roomType?: string;
   furnitureType?: string;
   furnitureWidthCm?: number;
   furnitureHeightCm?: number;

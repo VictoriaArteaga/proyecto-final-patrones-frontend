@@ -86,8 +86,16 @@ export default function Layout() {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
+  const handleLogout = async () => {
+    try {
+      // Pide al backend que borre la cookie HttpOnly de sesión.
+      await authService.logout();
+    } catch {
+      // Aunque falle, cerramos sesión en el cliente igualmente.
+    }
+    // Limpiamos cachés locales para no filtrar datos al siguiente usuario.
+    localStorage.removeItem(AVATAR_KEY);
+    localStorage.removeItem('notifications');
     navigate('/login');
   };
 

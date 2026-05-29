@@ -1,6 +1,5 @@
 import {
   Apartment as ApartmentIcon,
-  Weekend as WeekendIcon,
   Chair as ChairIcon,
   HelpOutlined as HelpOutlineIcon,
 } from '@mui/icons-material';
@@ -15,11 +14,6 @@ export const CATEGORY_META: Record<
     label: 'Arquitectura Exterior',
     color: '#6B9BD1', // lightBlue
     icon: ApartmentIcon,
-  },
-  INTERIOR_ROOM: {
-    label: 'Espacio Interior',
-    color: '#9E8DAD', // softPurple
-    icon: WeekendIcon,
   },
   FURNITURE_ITEM: {
     label: 'Mueble u Objeto',

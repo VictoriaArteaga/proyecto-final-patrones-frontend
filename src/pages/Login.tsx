@@ -26,15 +26,11 @@ export default function Login() {
     
     try {
       const credentials: LoginRequestDTO = { email, password };
-      const response = await authService.login(credentials);
-      
-      localStorage.setItem('token', response.token);
-      // Guardar datos del usuario si vienen en la respuesta
-      if ((response as any).user) {
-        localStorage.setItem('user', JSON.stringify((response as any).user));
-      }
+      // El backend responde con una cookie HttpOnly (Set-Cookie); el navegador
+      // la guarda automáticamente. No manejamos el token en JavaScript.
+      await authService.login(credentials);
+
       navigate('/new-project');
-      
     } catch (err: any) {
       setError(
         getFriendlyError(err, 'Correo o contraseña incorrectos. Verifícalos e inténtalo de nuevo.')
