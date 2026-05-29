@@ -31,6 +31,7 @@ import {
 
 import { projectService } from '../services/project.service';
 import { getFriendlyError } from '../utils/errorMessages';
+import { ACTIVE_PROJECT_KEY } from '../utils/storageKeys';
 import type {
   DesignCategory,
   ProjectResponseDTO,
@@ -83,9 +84,6 @@ const categories: {
       'Ej: Estantería de madera clara de 3 niveles, estilo minimalista.',
   },
 ];
-
-// Clave en localStorage para recordar el proyecto en curso entre navegaciones/recargas.
-const ACTIVE_PROJECT_KEY = 'newProject:activeProjectId';
 
 // Estados del backend en los que la IA está trabajando (hay que hacer polling).
 const GENERATING_STATES = [
