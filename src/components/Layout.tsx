@@ -8,7 +8,8 @@ import {
   Menu as MenuIcon, 
   Dashboard as DashboardIcon, 
   AddBox as AddBoxIcon, 
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  AccountCircle as AccountCircleIcon
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 
@@ -29,25 +30,26 @@ export default function Layout() {
   };
 
   const menuItems = [
-    { text: 'Panel Principal', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'Nueva Generación 3D', icon: <AddBoxIcon />, path: '/new-project' }
+    { text: 'Mis proyectos', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'Nueva Generación 3D', icon: <AddBoxIcon />, path: '/new-project' },
+    { text: 'Mi Perfil', icon: <AccountCircleIcon />, path: '/profile' }
   ];
 
   const drawer = (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.paper' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: '#E3EBF5' }}>
       <Box sx={{ 
         p: 3, 
         display: 'flex', 
         alignItems: 'center', 
         gap: 2,
-        background: `linear-gradient(135deg, rgba(107, 155, 209, 0.08) 0%, rgba(168, 216, 234, 0.05) 100%)`,
-        borderBottom: '1px solid rgba(107, 155, 209, 0.1)',
+        background: `linear-gradient(135deg, rgba(107, 155, 209, 0.12) 0%, rgba(168, 216, 234, 0.08) 100%)`,
+        borderBottom: '1px solid rgba(107, 155, 209, 0.15)',
       }}>
         <Avatar sx={{ bgcolor: 'primary.main', color: '#FFFFFF', fontWeight: 700 }}>
-          <span style={{ fontSize: '1.5rem' }}>🏗️</span>
+          <span style={{ fontSize: '1.5rem' }}>✿</span>
         </Avatar>
         <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 800, color: 'primary.dark', letterSpacing: '-0.5px' }}>
-          Arq-AI 3D
+          Arq- 3✿
         </Typography>
       </Box>
       <Divider sx={{ borderColor: 'rgba(107, 155, 209, 0.1)' }} />
@@ -98,7 +100,7 @@ export default function Layout() {
         <Button 
           fullWidth 
           variant="contained" 
-          color="error" 
+          color="secondary" 
           startIcon={<LogoutIcon />} 
           onClick={handleLogout}
           sx={{ borderRadius: 2, py: 1, fontWeight: 600 }}
@@ -118,11 +120,11 @@ export default function Layout() {
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
-          bgcolor: '#FFFFFF',
+          bgcolor: '#E8EEF5',
           backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid rgba(107, 155, 209, 0.1)',
+          borderBottom: '1px solid rgba(107, 155, 209, 0.3)',
           color: 'text.primary',
-          boxShadow: '0 2px 8px rgba(44, 74, 109, 0.08)',
+          boxShadow: '0 2px 8px rgba(44, 74, 109, 0.12)',
         }}
       >
         <Toolbar>
@@ -172,7 +174,7 @@ export default function Layout() {
         component="main"
         sx={{ 
           flexGrow: 1, 
-          p: { xs: 2, sm: 4 }, 
+          p: 0,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           minHeight: '100vh'
         }}

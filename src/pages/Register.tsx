@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, PersonAdd as PersonAddIcon, Person as PersonIcon, Lock as LockIcon, Mail as MailIcon } from '@mui/icons-material';
 import { authService } from '../services/auth.service';
+import { getFriendlyError } from '../utils/errorMessages';
 import type { RegisterRequestDTO } from '../types/auth.types';
 
 export default function Register() {
@@ -65,31 +66,18 @@ export default function Register() {
       
       setSuccess(true);
       setTimeout(() => {
-        navigate('/login');
-      }, 2000);
+        navigate('/new-project');
+      }, 1500);
       
     } catch (err: any) {
       console.error("Error completo:", err);
-      
-      if (!err.response) {
-        setError("Error de red. Asegúrate de que el servidor esté en ejecución.");
-        return;
-      }
 
-      const status = err.response.status;
-      const data = err.response.data;
-      
-      if (data) {
-        if (data.errors && Array.isArray(data.errors)) {
-          const validationMessages = data.errors.map((e: any) => e.defaultMessage || e.msg).join(' - ');
-          setError(`Error de validación: ${validationMessages}`);
-          return;
-        }
-        const backendError = data.message || data.error || JSON.stringify(data);
-        setError(`Error ${status}: ${backendError}`);
-      } else {
-        setError(`Error ${status} del servidor.`);
-      }
+      setError(
+        getFriendlyError(
+          err,
+          'No pudimos crear tu cuenta. Verifica tus datos e inténtalo de nuevo.'
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -187,7 +175,7 @@ export default function Register() {
               <Stack spacing={2}>
                 {[
                   { icon: '✿', text: 'Generación modelos 2D y 3D' },
-                  { icon: '✿', text: 'Procesamiento rápido' },
+            
                 ].map((benefit, idx) => (
                   <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <Box sx={{ fontSize: '1.5rem' }}>{benefit.icon}</Box>
@@ -237,7 +225,7 @@ export default function Register() {
             )}
             {success && (
               <Alert severity="success" variant="filled" sx={{ mb: 3, width: '100%', borderRadius: 2 }}>
-                ¡Registro exitoso! Llevándote al Login...
+                ¡Registro exitoso! Llevándote a crear tu primer proyecto...
               </Alert>
             )}
 
