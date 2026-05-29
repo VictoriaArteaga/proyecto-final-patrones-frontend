@@ -169,11 +169,14 @@ export default function NewProject() {
 
   // Create an Object URL from the uploaded file for the 3D background
   const backgroundImageUrl = useMemo(() => {
+    if (project?.imageOriginalUrl) {
+      return project.imageOriginalUrl;
+    }
     if (selectedFile) {
       return URL.createObjectURL(selectedFile);
     }
     return '';
-  }, [selectedFile]);
+  }, [selectedFile, project?.imageOriginalUrl]);
 
   // =========================
   // REANUDAR PROYECTO EN CURSO (al montar)
