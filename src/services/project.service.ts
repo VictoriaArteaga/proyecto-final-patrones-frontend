@@ -2,6 +2,7 @@ import api from './api';
 import type {
   DesignCategory,
   ProjectResponseDTO,
+  ProjectParametersInput,
 } from '../types/project.types';
 
 export const projectService = {
@@ -98,6 +99,22 @@ export const projectService = {
 
     const response = await api.post<ProjectResponseDTO>(
       `/projects/${projectId}/cancel-3d`
+    );
+
+    return response.data;
+  },
+
+  // 5c. Regenerar el render 2D tras un rechazo (descripción detallada + parámetros)
+  regenerate2D: async (
+    projectId: string,
+    description: string,
+    parameters: ProjectParametersInput
+  ): Promise<ProjectResponseDTO> => {
+
+    const response = await api.post<ProjectResponseDTO>(
+      `/projects/${projectId}/regenerate-2d`,
+      { description, parameters },
+      { headers: { 'Content-Type': 'application/json' } }
     );
 
     return response.data;
