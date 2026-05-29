@@ -91,6 +91,18 @@ export const projectService = {
     return response.data;
   },
 
+  // 5b. Detener la generación 3D en curso
+  cancel3D: async (
+    projectId: string
+  ): Promise<ProjectResponseDTO> => {
+
+    const response = await api.post<ProjectResponseDTO>(
+      `/projects/${projectId}/cancel-3d`
+    );
+
+    return response.data;
+  },
+
   // 6. Obtener detalles del proyecto
   getProject: async (
     projectId: string

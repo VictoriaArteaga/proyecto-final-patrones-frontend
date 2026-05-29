@@ -1,17 +1,40 @@
 import { useState } from 'react';
-import { 
-  AppBar, Box, CssBaseline, Divider, Drawer, IconButton, 
-  List, ListItem, ListItemButton, ListItemIcon, ListItemText, 
-  Toolbar, Typography, Button, Avatar 
+import {
+  AppBar, Box, CssBaseline, Divider, Drawer, IconButton,
+  List, ListItem, ListItemButton, ListItemIcon, ListItemText,
+  Toolbar, Typography, Button, Avatar, Badge, Menu, MenuItem
 } from '@mui/material';
-import { 
-  Menu as MenuIcon, 
-  Dashboard as DashboardIcon, 
-  AddBox as AddBoxIcon, 
+import {
+  Menu as MenuIcon,
+  Dashboard as DashboardIcon,
+  AddBox as AddBoxIcon,
   Logout as LogoutIcon,
-  AccountCircle as AccountCircleIcon
+  AccountCircle as AccountCircleIcon,
+  Notifications as NotificationsIcon,
+  NotificationsNone as NotificationsNoneIcon,
+  Person as PersonIcon,
+  CheckCircle as CheckCircleIcon,
+  ErrorOutlined as ErrorIcon,
+  Info as InfoIcon
 } from '@mui/icons-material';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useNotifications } from '../context/NotificationsContext';
+import type { NotificationType } from '../context/NotificationsContext';
+
+// Formatea el tiempo transcurrido de forma humana.
+const timeAgo = (ts: number): string => {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return 'hace un momento';
+  if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `hace ${Math.floor(diff / 3600)} h`;
+  return `hace ${Math.floor(diff / 86400)} d`;
+};
+
+const notifIcon = (type: NotificationType) => {
+  if (type === 'success') return <CheckCircleIcon sx={{ color: '#27AE60' }} />;
+  if (type === 'error') return <ErrorIcon sx={{ color: '#E74C3C' }} />;
+  return <InfoIcon sx={{ color: '#6B9BD1' }} />;
+};
 
 const drawerWidth = 260;
 
@@ -19,6 +42,18 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { notifications, unreadCount, markAllRead } = useNotifications();
+  const [notifAnchor, setNotifAnchor] = useState<null | HTMLElement>(null);
+
+  // Foto de perfil (guardada localmente por la vista "Mi perfil").
+  const avatarSrc = localStorage.getItem('profileAvatar') || '';
+
+  const handleOpenNotif = (e: React.MouseEvent<HTMLElement>) => {
+    setNotifAnchor(e.currentTarget);
+    markAllRead(); // al abrir, se marcan todas como leídas
+  };
+  const handleCloseNotif = () => setNotifAnchor(null);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -80,8 +115,8 @@ export default function Layout() {
               <ListItemIcon sx={{ minWidth: 40, color: location.pathname === item.path ? 'primary.main' : 'text.secondary' }}>
                 {item.icon}
               </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
+              <ListItemText
+                primary={item.text}
                 slotProps={{
                   primary: {
                     sx: {
@@ -94,6 +129,51 @@ export default function Layout() {
             </ListItemButton>
           </ListItem>
         ))}
+
+        {/* NOTIFICACIONES (historial completo) */}
+        <ListItem disablePadding sx={{ mb: 1 }}>
+          <ListItemButton
+            selected={location.pathname === '/notifications'}
+            onClick={() => navigate('/notifications')}
+            sx={{
+              borderRadius: 2,
+              transition: 'all 0.2s',
+              '&.Mui-selected': {
+                bgcolor: 'rgba(107, 155, 209, 0.12)',
+                color: 'primary.main',
+                '& .MuiListItemIcon-root': { color: 'primary.main' },
+                '&:hover': { bgcolor: 'rgba(107, 155, 209, 0.18)' },
+              },
+              '&:hover': { bgcolor: 'rgba(107, 155, 209, 0.06)' },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 40,
+                color:
+                  location.pathname === '/notifications'
+                    ? 'primary.main'
+                    : 'text.secondary',
+              }}
+            >
+              <Badge badgeContent={unreadCount} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </ListItemIcon>
+            <ListItemText
+              primary="Notificaciones"
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontWeight:
+                      location.pathname === '/notifications' ? 700 : 500,
+                    fontSize: '0.95rem',
+                  },
+                },
+              }}
+            />
+          </ListItemButton>
+        </ListItem>
       </List>
       <Box sx={{ p: 2 }}>
         <Divider sx={{ mb: 2, borderColor: 'rgba(107, 155, 209, 0.1)' }} />
@@ -140,8 +220,107 @@ export default function Layout() {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600 }}>
             {menuItems.find(i => i.path === location.pathname)?.text || 'Aplicación'}
           </Typography>
+
+          {/* Campana de notificaciones */}
+          <IconButton color="inherit" onClick={handleOpenNotif} aria-label="notificaciones">
+            <Badge badgeContent={unreadCount} color="error">
+              <NotificationsIcon />
+            </Badge>
+          </IconButton>
+
+          {/* Foto de perfil */}
+          <IconButton
+            onClick={() => navigate('/profile')}
+            sx={{ ml: 1 }}
+            aria-label="mi perfil"
+          >
+            <Avatar
+              src={avatarSrc || undefined}
+              sx={{ width: 36, height: 36, bgcolor: 'primary.main' }}
+            >
+              <PersonIcon fontSize="small" />
+            </Avatar>
+          </IconButton>
         </Toolbar>
       </AppBar>
+
+      {/* DROPDOWN DE NOTIFICACIONES */}
+      <Menu
+        anchorEl={notifAnchor}
+        open={Boolean(notifAnchor)}
+        onClose={handleCloseNotif}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{
+          paper: { sx: { width: 380, maxWidth: '92vw', maxHeight: 460, mt: 1 } },
+        }}
+      >
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            Notificaciones recientes
+          </Typography>
+        </Box>
+        <Divider />
+
+        {notifications.length === 0 ? (
+          <Box sx={{ px: 2, py: 5, textAlign: 'center' }}>
+            <NotificationsNoneIcon
+              sx={{ fontSize: 44, color: 'text.disabled', mb: 1 }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              No tienes notificaciones
+            </Typography>
+          </Box>
+        ) : (
+          [
+            // Solo las últimas 5 en la campanita.
+            ...notifications.slice(0, 5).map((n) => (
+              <MenuItem
+                key={n.id}
+                onClick={handleCloseNotif}
+                sx={{
+                  whiteSpace: 'normal',
+                  alignItems: 'flex-start',
+                  gap: 1.5,
+                  py: 1.5,
+                  borderLeft: n.read ? 'none' : '3px solid',
+                  borderLeftColor: 'primary.main',
+                  bgcolor: n.read ? 'transparent' : 'rgba(107, 155, 209, 0.06)',
+                }}
+              >
+                <Box sx={{ mt: 0.3 }}>{notifIcon(n.type)}</Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: n.read ? 400 : 700 }}
+                  >
+                    {n.message}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {timeAgo(n.createdAt)}
+                  </Typography>
+                </Box>
+              </MenuItem>
+            )),
+            <Divider key="divider-ver-todas" />,
+            <MenuItem
+              key="ver-todas"
+              onClick={() => {
+                handleCloseNotif();
+                navigate('/notifications');
+              }}
+              sx={{ justifyContent: 'center', py: 1.25 }}
+            >
+              <Typography
+                variant="body2"
+                sx={{ fontWeight: 700, color: 'primary.main' }}
+              >
+                Ver todas las notificaciones
+              </Typography>
+            </MenuItem>,
+          ]
+        )}
+      </Menu>
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
